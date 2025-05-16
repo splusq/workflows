@@ -1,0 +1,80 @@
+using Azure.AI.OpenAI;
+using Azure.Identity;
+using OpenAI.Assistants;
+using System.Text.Json;
+using System.Text;
+using Azure.Core;
+using System.ClientModel;
+
+public static class Ext
+{
+    public static Uri WorkflowEndpoint 
+    {
+        get 
+        {
+            if (!Uri.TryCreate(Environment.GetEnvironmentVariable("AZURE_AI_AGENTS_ENDPOINT")?.Replace("/agents/v1.0", "/workflows/v1.0"), UriKind.Absolute, out var uri))
+            {
+                throw new ArgumentException("The AZURE_AI_AGENTS_ENDPOINT environment variable must be a valid URI.");
+            }
+
+            return uri;
+        }
+    }
+    
+    private static HttpClient _client;
+
+    static Ext() 
+    {
+        _client = new HttpClient() { BaseAddress = WorkflowEndpoint };
+        _client.DefaultRequestHeaders.Add("Authorization", $"Bearer {(new DefaultAzureCredential().GetTokenAsync(new Azure.Core.TokenRequestContext(new[] { "https://management.azure.com/" }))).Result.Token}");
+    }
+
+    public static async Task<string> PublishWorkflowAsync(this AssistantClient _, string workflow)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Post, "agents")
+        {
+            Content = new StringContent(workflow, Encoding.UTF8, "application/json")
+        };
+
+        var response = await _client.SendAsync(request).ConfigureAwait(false);
+        response.EnsureSuccessStatusCode();
+
+        var json = await response.Content.ReadAsStringAsync().ConfigureAwait(false) ?? string.Empty;
+        
+        using(var doc = JsonDocument.Parse(json))
+        {
+            return doc.RootElement.GetProperty("id").GetString() ?? string.Empty;
+        }
+    }
+
+    public static async Task DeleteWorkflowAsync(this AssistantClient _, string workflowId)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Delete, $"agents/{workflowId}");
+        var response = await _client.SendAsync(request).ConfigureAwait(false);
+
+        response.EnsureSuccessStatusCode();
+    }
+
+    public static async Task<string> BuildWorkflowAsync(this AssistantClient _, string workflow, params string[] assistants) 
+    {
+        var content = await File.ReadAllTextAsync(workflow).ConfigureAwait(false);
+        foreach (var (assistant, index) in assistants.Select((a, index) => (a, index)))
+        {
+            content = content.Replace($"{{assistant_{index}}}", assistant);
+        }
+        
+        return content;
+    }
+
+    public static string ReadBinaryContent(this BinaryContent content)
+    {
+        using(var stream = new MemoryStream())
+        using(var reader = new StreamReader(stream))
+        {
+            content.WriteTo(stream, default);
+            stream.Position = 0;
+
+            return reader.ReadToEnd();
+        }
+    }
+}

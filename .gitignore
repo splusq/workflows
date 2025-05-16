@@ -1,0 +1,17 @@
+# Ignore everything
+*
+
+# Allow directories
+!*/
+
+# Allow key files
+!Makefile
+!**/*.sln
+!**/*.csproj
+!**/*.cs
+!**/*.env
+!**/*.md
+
+# Exclude bin and obj folders
+bin/
+obj/
