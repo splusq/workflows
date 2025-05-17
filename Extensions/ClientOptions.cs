@@ -86,9 +86,9 @@ public class ClientOptions : AzureOpenAIClientOptions
             UriBuilder uriBuilder = new(request.Uri);
 
             // Check if URI contains "run" and body contains assistant_id starting with "wf_"
-            if (request.Uri.ToString().Contains("runs", StringComparison.OrdinalIgnoreCase) && request.Content != null)
+            if (request.Uri.ToString().Contains("runs", StringComparison.OrdinalIgnoreCase))
             {
-                if (request.Content.IsWorkflow())
+                if (request.Content!.IsWorkflow())
                 {
                     uriBuilder.Path = Regex.Replace(uriBuilder.Path, "/agents/v1.0", "/workflows/v1.0");
                 }
