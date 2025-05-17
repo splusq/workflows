@@ -1,0 +1,36 @@
+{
+  "Variables": [
+    {
+      "Type": "messages",
+      "Name": "HaikuOutput"
+    },
+    {
+      "Type": "thread",
+      "Name": "HaikuThread"
+    }
+  ],
+  "States": [
+    {
+      "Name": "TellHaiku",
+      "Actors": [{
+        "AgentId": "{assistant_0}",
+        "HumanInLoopMode": "Always",
+        "StreamOutput": true,
+        "MessagesOut": "HaikuOutput",
+        "Thread": "HaikuThread"
+      }]
+    },
+    {
+      "Name": "End",
+      "IsFinal": true
+    }
+  ],
+  "StartState": "TellHaiku",
+  "Transitions": [
+    {
+      "From": "TellHaiku",
+      "To": "End",
+      "Condition": "HaikuOutput.Contains('Haiku')"
+    }
+  ]
+}

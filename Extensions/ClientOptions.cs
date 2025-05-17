@@ -92,8 +92,6 @@ public class ClientOptions : AzureOpenAIClientOptions
                 if (content.Contains("\"assistant_id\":") && content.Contains("\"wf_"))
                 {
                     uriBuilder.Path = Regex.Replace(uriBuilder.Path, "/agents/v1.0", "/workflows/v1.0");  
-
-                    Console.WriteLine($"Special workflow assistant run detected {uriBuilder.Uri}");
                 }
             }
 

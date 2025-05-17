@@ -25,6 +25,7 @@ try
     // create run
     await foreach (var run in client.CreateRunStreamingAsync(thread.Value.Id, workflowId))
     {
+        Console.WriteLine($"event: {run}");
         if (run is MessageContentUpdate contentUpdate)
         {
             Console.Write(contentUpdate.Text);
