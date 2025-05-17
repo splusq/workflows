@@ -64,15 +64,30 @@ public static class Ext
         return content;
     }
 
-    public static string ReadBinaryContent(this BinaryContent content)
+    public static bool IsWorkflow(this BinaryContent content)
     {
-        using(var stream = new MemoryStream())
-        using(var reader = new StreamReader(stream))
-        {
-            content.WriteTo(stream, default);
-            stream.Position = 0;
+        // Look for: "assistant_id":"wf_"
+        var pattern = Encoding.UTF8.GetBytes("\"assistant_id\":\"wf_");
+        using var stream = new MemoryStream();
+        content.WriteTo(stream, default);
+        stream.Position = 0;
 
-            return reader.ReadToEnd();
+        int matchIndex = 0;
+        int b;
+        while ((b = stream.ReadByte()) != -1)
+        {
+            if (b == pattern[matchIndex])
+            {
+                matchIndex++;
+                if (matchIndex == pattern.Length)
+                    return true;
+            }
+            else
+            {
+                matchIndex = (b == pattern[0]) ? 1 : 0;
+            }
         }
+
+        return false;
     }
 }
