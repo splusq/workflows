@@ -18,11 +18,12 @@ public class ClientOptions : AzureOpenAIClientOptions
     public required string ApiVersion { get; set; }
 
     public static ClientOptions Default {
-        get {
+        get
+        {
             return new ClientOptions()
             {
-                ApiVersion = "2024-07-01-preview",
-                Audience = "https://management.azure.com/",
+                ApiVersion = Environment.GetEnvironmentVariable("AZURE_AI_API_VERSION")!,
+                Audience = Environment.GetEnvironmentVariable("AZURE_AI_AUDIENCE")!,
             };
         }
     }
@@ -91,12 +92,12 @@ public class ClientOptions : AzureOpenAIClientOptions
 
                 if (content.Contains("\"assistant_id\":") && content.Contains("\"wf_"))
                 {
-                    uriBuilder.Path = Regex.Replace(uriBuilder.Path, "/agents/v1.0", "/workflows/v1.0");  
+                    uriBuilder.Path = Regex.Replace(uriBuilder.Path, "/agents/v1.0", "/workflows/v1.0");
                 }
             }
 
             // Remove the "/openai" request URI infix
-            uriBuilder.Path = Regex.Replace(uriBuilder.Path, "/openai", "");
+            uriBuilder.Path = Regex.Replace(uriBuilder.Path, "/openai", string.Empty);
 
             // Substitute the Azure AI Agents api-version where the default AOAI one is
             uriBuilder.Query = Regex.Replace(uriBuilder.Query, "api-version=[^&]*", $"api-version={ParentOptions.ApiVersion}");

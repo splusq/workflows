@@ -2,7 +2,7 @@ using Azure.AI.OpenAI;
 using Azure.Identity;
 using OpenAI.Assistants;
 
-public class Agent : IAsyncDisposable
+public class Agent
 {
     private readonly AssistantClient client;
 
@@ -14,11 +14,6 @@ public class Agent : IAsyncDisposable
         }
 
         this.client = new AzureOpenAIClient(uri, new DefaultAzureCredential(), ClientOptions.Default).GetAssistantClient();
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        await Task.Yield();
     }
 
     public static implicit operator AssistantClient(Agent agent) => agent.client;
