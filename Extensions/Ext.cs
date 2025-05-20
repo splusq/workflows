@@ -2,7 +2,6 @@ using Azure.Identity;
 using OpenAI.Assistants;
 using System.Text.Json;
 using System.Text;
-using System.Reflection;
 using Microsoft.SemanticKernel;
 
 public static class Ext
@@ -28,14 +27,14 @@ public static class Ext
         _client.DefaultRequestHeaders.Add("Authorization", $"Bearer {(new DefaultAzureCredential().GetTokenAsync(new Azure.Core.TokenRequestContext(new[] { Environment.GetEnvironmentVariable("AZURE_AI_AUDIENCE")! }))).Result.Token}");
     }
 
-    public static async Task<string> PublishWorkflowAsync(this AssistantClient client, KernelProcess process)
+    public static async Task<string> PublishWorkflowAsync<T>(this AssistantClient client, FoundryProcessBuilder<T> process) where T : class, new()
     {
-        var definition = await process.SeralizeAsync();
+        var definition = await process.ToJsonAsync();
 
 
         var request = new HttpRequestMessage(HttpMethod.Post, $"agents?api-version={Environment.GetEnvironmentVariable("AZURE_AI_API_VERSION")}")
         {
-            Content = new StringContent(await process.SeralizeAsync(), Encoding.UTF8, "application/json")
+            Content = new StringContent(await process.ToJsonAsync(), Encoding.UTF8, "application/json")
         };
 
         // Console.WriteLine($"Posting workflow to {_client.BaseAddress}{request.RequestUri}");
@@ -97,28 +96,6 @@ public static class Ext
         }
 
         return false;
-    }
-
-    public static async Task<string> SeralizeAsync(this KernelProcess process)
-    {
-        // Get the assembly containing the WorkflowSerializer class
-        Assembly assembly = typeof(FoundryProcessBuilder).Assembly;
-
-        // Get the internal type
-        Type workflowBuilderType = assembly.GetType("Microsoft.SemanticKernel.WorkflowBuilder") ?? throw new();
-        Type workflowSerializerType = assembly.GetType("Microsoft.SemanticKernel.WorkflowSerializer") ?? throw new();
-
-        // Get the SerializeToJson method
-        MethodInfo buildMethod = workflowBuilderType.GetMethod("BuildWorkflow", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static) ?? throw new();
-        MethodInfo serializeMethod = workflowSerializerType.GetMethod("SerializeToJson", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static) ?? throw new();
-
-        // Since this is an async method, we need to invoke it and await the Task
-        Task<Workflow> workflowTask = (Task<Workflow>?)buildMethod.Invoke(null, [process]) ?? throw new();
-        var workflow = await workflowTask;
-
-        string? json = (string?)serializeMethod.Invoke(null, [workflow]);
-
-        return json ?? throw new();
     }
 
     extension(Console)

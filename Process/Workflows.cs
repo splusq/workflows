@@ -3,24 +3,24 @@ using Microsoft.SemanticKernel.Agents;
 using Microsoft.SemanticKernel.Agents.AzureAI;
 using OpenAI.Assistants;
 
+public class TwoAgentMathState
+{
+    public List<ChatMessageContent>? UserMessages { get; set; }
+
+    public List<ChatMessageContent>? StudentMessages { get; set; }
+
+    public List<ChatMessageContent>? TeacherMessages { get; set; }
+}
+
 public static class Workflows
 {
-    public class TwoAgentMathState
-    {
-        public List<ChatMessageContent>? UserMessages { get; set; }
-
-        public List<ChatMessageContent>? StudentMessages { get; set; }
-
-        public List<ChatMessageContent>? TeacherMessages { get; set; }
-    }
-
-    public static KernelProcess BuildTutor(Assistant studentAgent, Assistant teacherAgent)
+    public static FoundryProcessBuilder<T> Build<T>(Assistant studentAgent, Assistant teacherAgent) where T : class, new()
     {
         var studentDefinition = new AgentDefinition { Id = studentAgent.Id, Name = studentAgent.Name, Type = AzureAIAgentFactory.AzureAIAgentType };
         var teacherDefinition = new AgentDefinition { Id = teacherAgent.Id, Name = teacherAgent.Name, Type = AzureAIAgentFactory.AzureAIAgentType };
 
         // Define the process with a state type
-        var processBuilder = new FoundryProcessBuilder<TwoAgentMathState>("two_agent_math_chat");
+        var processBuilder = new FoundryProcessBuilder<T>("two_agent_math_chat");
 
         // Create a thread for the student
         processBuilder.AddThread("Student", KernelProcessThreadLifetime.Scoped);
@@ -40,7 +40,7 @@ public static class Workflows
             thread: "_variables_.Student",
             messagesIn: ["_variables_.TeacherMessages"],
             inputs: new Dictionary<string, string> { });
-            
+
         // When the student agent exits, update the process state to save the student's messages and update interaction counts
         processBuilder.OnStepExit(student)
             .UpdateProcessState(path: "StudentMessages", operation: StateUpdateOperations.Set, value: "_agent_.messages_out");
@@ -72,6 +72,6 @@ public static class Workflows
         processBuilder.OnEvent(teacher, "correct_answer")
             .StopProcess();
 
-        return processBuilder.Build();
+        return processBuilder;
     }
 }

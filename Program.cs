@@ -26,7 +26,7 @@ var workflowId = string.Empty;
 try
 {
     // publish the workflow
-    workflowId = await client.PublishWorkflowAsync(Workflows.BuildTutor(studentAgent.Value, teacherAgent.Value));
+    workflowId = await client.PublishWorkflowAsync(Workflows.Build<TwoAgentMathState>(studentAgent.Value, teacherAgent.Value));
 
     await foreach (var userMessage in Console.Readlines("User> "))
     {
