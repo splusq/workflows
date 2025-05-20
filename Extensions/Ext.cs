@@ -29,9 +29,6 @@ public static class Ext
 
     public static async Task<string> PublishWorkflowAsync<T>(this AssistantClient client, FoundryProcessBuilder<T> process) where T : class, new()
     {
-        var definition = await process.ToJsonAsync();
-
-
         var request = new HttpRequestMessage(HttpMethod.Post, $"agents?api-version={Environment.GetEnvironmentVariable("AZURE_AI_API_VERSION")}")
         {
             Content = new StringContent(await process.ToJsonAsync(), Encoding.UTF8, "application/json")
