@@ -35,24 +35,26 @@ try
             InitialMessages = { userMessage }
         }))
         {
-            var assistant = string.Empty;
-
-            if (run is MessageStatusUpdate status)
-            {
-                Console.WriteLine($"{status.Value.AssistantId}> ");
-            }
             if (run is MessageContentUpdate contentUpdate)
             {
                 Console.Write(contentUpdate.Text);
             }
-            else if (run is RunUpdate runUpdate && string.IsNullOrEmpty(threadId))
+            else if (run is RunUpdate runUpdate)
             {
-                threadId = runUpdate.Value.ThreadId;
+                if (threadId == string.Empty)
+                {
+                    threadId = runUpdate.Value.ThreadId;
+                }
+                if (runUpdate.UpdateKind == StreamingUpdateReason.RunInProgress && !runUpdate.Value.Id.StartsWith("wf_run"))
+                {
+                    Console.WriteLine();
+                    Console.Write($"{runUpdate.Value.Metadata["x-agent-name"]}> ");
+                }
             }
         }
 
         // delete thread, so we can start over
-        Console.WriteLine($"Deleting thread {threadId!}...");
+        Console.WriteLine($"\nDeleting thread {threadId!}...");
         await client.DeleteThreadAsync(threadId!);
     }
 }
