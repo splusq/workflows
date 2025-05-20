@@ -2,7 +2,8 @@ using Azure.Identity;
 using OpenAI.Assistants;
 using System.Text.Json;
 using System.Text;
-using System.ClientModel;
+using System.Reflection;
+using Microsoft.SemanticKernel;
 
 public static class Ext
 {
@@ -27,21 +28,39 @@ public static class Ext
         _client.DefaultRequestHeaders.Add("Authorization", $"Bearer {(new DefaultAzureCredential().GetTokenAsync(new Azure.Core.TokenRequestContext(new[] { Environment.GetEnvironmentVariable("AZURE_AI_AUDIENCE")! }))).Result.Token}");
     }
 
-    public static async Task<string> PublishWorkflowAsync(this AssistantClient client, string workflow)
+    public static async Task<string> PublishWorkflowAsync(this AssistantClient client, KernelProcess process)
     {
-        var request = new HttpRequestMessage(HttpMethod.Post, "agents")
+        var definition = await process.SeralizeAsync();
+
+
+        var request = new HttpRequestMessage(HttpMethod.Post, $"agents?api-version={Environment.GetEnvironmentVariable("AZURE_AI_API_VERSION")}")
         {
-            Content = new StringContent(workflow, Encoding.UTF8, "application/json")
+            Content = new StringContent(await process.SeralizeAsync(), Encoding.UTF8, "application/json")
         };
 
+        // Console.WriteLine($"Posting workflow to {_client.BaseAddress}{request.RequestUri}");
+        // Console.WriteLine(definition);
+
         var response = await _client.SendAsync(request).ConfigureAwait(false);
-        response.EnsureSuccessStatusCode();
+        try
+        {
+            response.EnsureSuccessStatusCode();
+        }
+        catch (HttpRequestException ex)
+        {
+            var errorContent = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+            throw new Exception($"Error publishing workflow: {errorContent}", ex);
+        }
 
         var json = await response.Content.ReadAsStringAsync().ConfigureAwait(false) ?? string.Empty;
 
-        using(var doc = JsonDocument.Parse(json))
+        using (var doc = JsonDocument.Parse(json))
         {
-            return doc.RootElement.GetProperty("id").GetString() ?? string.Empty;
+            var workflowId = doc.RootElement.GetProperty("id").GetString() ?? string.Empty;
+
+            Console.WriteLine($"Workflow {workflowId} published.");
+
+            return workflowId;
         }
     }
 
@@ -53,18 +72,7 @@ public static class Ext
         response.EnsureSuccessStatusCode();
     }
 
-    public static async Task<string> BuildWorkflowAsync(this AssistantClient _, string workflow, params string[] assistants)
-    {
-        var content = await File.ReadAllTextAsync(workflow).ConfigureAwait(false);
-        foreach (var (assistant, index) in assistants.Select((a, index) => (a, index)))
-        {
-            content = content.Replace($"{{assistant_{index}}}", assistant);
-        }
-
-        return content;
-    }
-
-    public static bool IsWorkflow(this BinaryContent content)
+    public static bool IsWorkflow(this System.ClientModel.BinaryContent content)
     {
         // Look for: "assistant_id":"wf_"
         var pattern = Encoding.UTF8.GetBytes("\"assistant_id\":\"wf_");
@@ -89,5 +97,48 @@ public static class Ext
         }
 
         return false;
+    }
+
+    public static async Task<string> SeralizeAsync(this KernelProcess process)
+    {
+        // Get the assembly containing the WorkflowSerializer class
+        Assembly assembly = typeof(FoundryProcessBuilder).Assembly;
+
+        // Get the internal type
+        Type workflowBuilderType = assembly.GetType("Microsoft.SemanticKernel.WorkflowBuilder") ?? throw new();
+        Type workflowSerializerType = assembly.GetType("Microsoft.SemanticKernel.WorkflowSerializer") ?? throw new();
+
+        // Get the SerializeToJson method
+        MethodInfo buildMethod = workflowBuilderType.GetMethod("BuildWorkflow", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static) ?? throw new();
+        MethodInfo serializeMethod = workflowSerializerType.GetMethod("SerializeToJson", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static) ?? throw new();
+
+        // Since this is an async method, we need to invoke it and await the Task
+        Task<Workflow> workflowTask = (Task<Workflow>?)buildMethod.Invoke(null, [process]) ?? throw new();
+        var workflow = await workflowTask;
+
+        string? json = (string?)serializeMethod.Invoke(null, [workflow]);
+
+        return json ?? throw new();
+    }
+
+    extension(Console)
+    {
+        public static async IAsyncEnumerable<string> Readlines(string prompt)
+        {
+            while (true)
+            {
+                Console.Write(prompt);
+
+                var input = Console.ReadLine();
+                if (string.IsNullOrEmpty(input))
+                {
+                    break;
+                }
+
+                yield return input;
+            }
+
+            await Task.Yield();
+        }
     }
 }
