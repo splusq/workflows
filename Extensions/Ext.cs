@@ -58,7 +58,7 @@ public static class Ext
         {
             var workflowId = doc.RootElement.GetProperty("id").GetString() ?? string.Empty;
 
-            Console.WriteLine($"Workflow {workflowId} published.");
+            Console.WriteLine($"Creating workflow {workflowId}...");
 
             return workflowId;
         }

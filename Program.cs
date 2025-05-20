@@ -9,6 +9,7 @@ var teacherAgent = await client.CreateAssistantAsync("gpt-4o", new()
     Name = "Teacher",
     Instructions = "You are a teacher that create pre-school math question for student and check answer.\nIf the answer is correct, you stop the conversation by saying [COMPLETE].\nIf the answer is wrong, you ask student to fix it."
 });
+Console.WriteLine($"Creating agent {teacherAgent.Value.Name} ({teacherAgent.Value.Id})...");
 
 var studentAgent = await client.CreateAssistantAsync("gpt-4o", new()
 {
@@ -16,6 +17,9 @@ var studentAgent = await client.CreateAssistantAsync("gpt-4o", new()
     Name = "Student",
     Instructions = "You are a student that answer question from teacher, when teacher gives you question you answer them."
 });
+
+Console.WriteLine($"Creating agent {studentAgent.Value.Name} ({studentAgent.Value.Id})...");
+
 
 var workflowId = string.Empty;
 
@@ -67,11 +71,11 @@ finally
     Console.WriteLine();
 
     // delete agent
-    Console.WriteLine($"Deleting assistant {teacherAgent?.Value.Id}...");
+    Console.WriteLine($"Deleting agent {teacherAgent?.Value.Name} {teacherAgent?.Value.Id}...");
     await client.DeleteAssistantAsync(teacherAgent?.Value.Id);
 
     // delete agent
-    Console.WriteLine($"Deleting assistant {studentAgent?.Value.Id}...");
+    Console.WriteLine($"Deleting agent {studentAgent?.Value.Name} {studentAgent?.Value.Id}...");
     await client.DeleteAssistantAsync(studentAgent?.Value.Id);
 
     // delete workflow
