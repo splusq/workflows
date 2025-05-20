@@ -5,4 +5,4 @@ restore:
 build:
 	dotnet build
 run:
-	dotnet run
+	dotnet run --no-build
