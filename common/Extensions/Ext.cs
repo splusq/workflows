@@ -1,8 +1,9 @@
 using Azure.Identity;
-using OpenAI.Assistants;
 using System.Text.Json;
 using System.Text;
 using Microsoft.SemanticKernel;
+using System.Text.RegularExpressions;
+using Azure.Core;
 
 public static class Ext
 {
@@ -27,7 +28,7 @@ public static class Ext
         _client.DefaultRequestHeaders.Add("Authorization", $"Bearer {(new DefaultAzureCredential().GetTokenAsync(new Azure.Core.TokenRequestContext(new[] { Environment.GetEnvironmentVariable("AZURE_AI_AUDIENCE")! }))).Result.Token}");
     }
 
-    public static async Task<string> PublishWorkflowAsync<T>(this AssistantClient client, FoundryProcessBuilder<T> process) where T : class, new()
+    public static async Task<Workflow> PublishWorkflowAsync<T>(this FoundryProcessBuilder<T> process) where T : class, new()
     {
         var request = new HttpRequestMessage(HttpMethod.Post, $"agents?api-version={Environment.GetEnvironmentVariable("AZURE_AI_API_VERSION")}")
         {
@@ -56,26 +57,50 @@ public static class Ext
 
             Console.WriteLine($"Creating workflow {workflowId}...");
 
-            return workflowId;
+            return new Workflow(workflowId);
         }
     }
 
-    public static async Task DeleteWorkflowAsync(this AssistantClient _, string workflowId)
+    public static async Task DeleteWorkflowAsync(this Workflow workflow)
     {
-        var request = new HttpRequestMessage(HttpMethod.Delete, $"agents/{workflowId}");
+        var request = new HttpRequestMessage(HttpMethod.Delete, $"agents/{workflow.Id}");
         var response = await _client.SendAsync(request).ConfigureAwait(false);
 
         response.EnsureSuccessStatusCode();
     }
 
-    public static bool IsWorkflow(this System.ClientModel.BinaryContent content)
+    public static Uri Reroute(this Uri uri, string apiVersion, bool isWorkflow)
     {
-        // Look for: "assistant_id":"wf_"
-        var pattern = Encoding.UTF8.GetBytes("\"assistant_id\":\"wf_");
-        using var stream = new MemoryStream();
-        content.WriteTo(stream, default);
-        stream.Position = 0;
+        UriBuilder uriBuilder = new(uri);
 
+        // Check if URI contains "run" and body contains assistant_id starting with "wf_"
+        if (uri.ToString().Contains("runs", StringComparison.OrdinalIgnoreCase))
+        {
+            if (isWorkflow)
+            {
+                uriBuilder.Path = Regex.Replace(uriBuilder.Path, "/agents/v1.0", "/workflows/v1.0");
+            }
+        }
+
+        // Remove the "/openai" request URI infix, if present
+        uriBuilder.Path = Regex.Replace(uriBuilder.Path, "/openai", string.Empty);
+
+        // Substitute the Azure AI Agents api-version where the default AOAI one is
+        uriBuilder.Query = Regex.Replace(uriBuilder.Query, "api-version=[^&]*", $"api-version={apiVersion}");
+
+        // Ensure file search citation result content is always requested on run steps
+        if (!uriBuilder.Query.Contains("include[]"))
+        {
+            uriBuilder.Query += "&include[]=step_details.tool_calls[*].file_search.results[*].content";
+        }
+
+        return uriBuilder.Uri;
+    }
+
+    private static bool StreamContainsWorkflowPattern(Stream stream)
+    {
+        var pattern = Encoding.UTF8.GetBytes("\"assistant_id\":\"wf_");
+        stream.Position = 0;
         int matchIndex = 0;
         int b;
         while ((b = stream.ReadByte()) != -1)
@@ -92,6 +117,36 @@ public static class Ext
             }
         }
 
+        return false;
+    }
+
+    public static bool IsWorkflow(this RequestContent content)
+    {
+        try
+        {
+            using var stream = new MemoryStream();
+            content?.WriteTo(stream, default);
+            return StreamContainsWorkflowPattern(stream);
+        }
+        catch
+        {
+            // ignore
+        }
+        return false;
+    }
+
+    public static bool IsWorkflow(this System.ClientModel.BinaryContent content)
+    {
+        try
+        {
+            using var stream = new MemoryStream();
+            content?.WriteTo(stream, default);
+            return StreamContainsWorkflowPattern(stream);
+        }
+        catch
+        {
+            // ignore
+        }
         return false;
     }
 

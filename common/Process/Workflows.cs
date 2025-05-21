@@ -1,7 +1,8 @@
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.Agents;
 using Microsoft.SemanticKernel.Agents.AzureAI;
-using OpenAI.Assistants;
+
+public record Workflow(string Id);
 
 public class TwoAgentMathState
 {
@@ -14,10 +15,10 @@ public class TwoAgentMathState
 
 public static class Workflows
 {
-    public static FoundryProcessBuilder<T> Build<T>(Assistant studentAgent, Assistant teacherAgent) where T : class, new()
+    public static FoundryProcessBuilder<T> Build<T>(string studentAgentId, string studentAgentName, string teacherAgentId, string teacherAgentName) where T : class, new()
     {
-        var studentDefinition = new AgentDefinition { Id = studentAgent.Id, Name = studentAgent.Name, Type = AzureAIAgentFactory.AzureAIAgentType };
-        var teacherDefinition = new AgentDefinition { Id = teacherAgent.Id, Name = teacherAgent.Name, Type = AzureAIAgentFactory.AzureAIAgentType };
+        var studentDefinition = new AgentDefinition { Id = studentAgentId, Name = studentAgentName, Type = AzureAIAgentFactory.AzureAIAgentType };
+        var teacherDefinition = new AgentDefinition { Id = teacherAgentId, Name = teacherAgentName, Type = AzureAIAgentFactory.AzureAIAgentType };
 
         // Define the process with a state type
         var processBuilder = new FoundryProcessBuilder<T>("two_agent_math_chat");

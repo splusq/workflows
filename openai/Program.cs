@@ -20,13 +20,12 @@ var studentAgent = await client.CreateAssistantAsync("gpt-4o", new()
 
 Console.WriteLine($"Creating agent {studentAgent.Value.Name} ({studentAgent.Value.Id})...");
 
-
-var workflowId = string.Empty;
+Workflow? workflow = null;
 
 try
 {
     // publish the workflow
-    workflowId = await client.PublishWorkflowAsync(Workflows.Build<TwoAgentMathState>(studentAgent.Value, teacherAgent.Value));
+    workflow = await Workflows.Build<TwoAgentMathState>(studentAgent.Value.Id, studentAgent.Value.Name, teacherAgent.Value.Id, teacherAgent.Value.Name).PublishWorkflowAsync();
 
     await foreach (var userMessage in Console.Readlines("User> "))
     {
@@ -34,7 +33,7 @@ try
         var threadId = string.Empty;
 
         // create run
-        await foreach (var run in client.CreateThreadAndRunStreamingAsync(workflowId, new()
+        await foreach (var run in client.CreateThreadAndRunStreamingAsync(workflow.Id, new()
         {
             InitialMessages = { userMessage }
         }))
@@ -79,10 +78,10 @@ finally
     await client.DeleteAssistantAsync(studentAgent?.Value.Id);
 
     // delete workflow
-    Console.WriteLine($"Deleting workflow {workflowId!}...");
+    Console.WriteLine($"Deleting workflow {workflow?.Id}...");
     try
     {
-        await client.DeleteWorkflowAsync(workflowId!);
+        await workflow!.DeleteWorkflowAsync();
     }
     catch
     {

@@ -1,6 +1,5 @@
 using Azure.AI.OpenAI;
 using System.ClientModel.Primitives;
-using System.Text.RegularExpressions;
 
 /// <summary>
 /// A specialization of <see cref="AzureOpenAIClientOptions"/> intended to allow the customization of an
@@ -29,12 +28,6 @@ public class ClientOptions : AzureOpenAIClientOptions
     }
 
     /// <summary>
-    /// Key/value pairs that should be included on request headers. Pairs with keys that already exist in the headers
-    /// will have their current values be overwritten with the newly-provided value.
-    /// </summary>
-    public Dictionary<string, string> AdditionalHeaders { get; } = [];
-
-    /// <summary>
     /// Creates a new instance of <see cref="AzureAIAgentClientOptions"/> that will customize an
     /// <see cref="AzureOpenAIClient"/> for use with the Azure AI Agents service.
     /// </summary>
@@ -52,14 +45,14 @@ public class ClientOptions : AzureOpenAIClientOptions
     /// </remarks>
     public ClientOptions() : base()
     {
-        AddPolicy(new TrafficPolicy(this), PipelinePosition.PerCall);
+        AddPolicy(new RoutingPolicy(this), PipelinePosition.PerCall);
     }
 
-    internal class TrafficPolicy : PipelinePolicy
+    internal class RoutingPolicy : PipelinePolicy
     {
         public ClientOptions ParentOptions { get; }
 
-        public TrafficPolicy(ClientOptions parentOptions)
+        public RoutingPolicy(ClientOptions parentOptions)
         {
             ParentOptions = parentOptions;
         }
@@ -83,36 +76,7 @@ public class ClientOptions : AzureOpenAIClientOptions
                 throw new ArgumentException(nameof(request.Uri));
             }
 
-            UriBuilder uriBuilder = new(request.Uri);
-
-            // Check if URI contains "run" and body contains assistant_id starting with "wf_"
-            if (request.Uri.ToString().Contains("runs", StringComparison.OrdinalIgnoreCase))
-            {
-                if (request.Content!.IsWorkflow())
-                {
-                    uriBuilder.Path = Regex.Replace(uriBuilder.Path, "/agents/v1.0", "/workflows/v1.0");
-                }
-            }
-
-            // Remove the "/openai" request URI infix
-            uriBuilder.Path = Regex.Replace(uriBuilder.Path, "/openai", string.Empty);
-
-            // Substitute the Azure AI Agents api-version where the default AOAI one is
-            uriBuilder.Query = Regex.Replace(uriBuilder.Query, "api-version=[^&]*", $"api-version={ParentOptions.ApiVersion}");
-
-            // Ensure file search citation result content is always requested on run steps
-            if (!uriBuilder.Query.Contains("include[]"))
-            {
-                uriBuilder.Query += "&include[]=step_details.tool_calls[*].file_search.results[*].content";
-            }
-
-            request.Uri = uriBuilder.Uri;
-
-            // Emplace custom headers
-            foreach ((string key, string value) in ParentOptions.AdditionalHeaders)
-            {
-                request.Headers.Set(key, value);
-            }
+            request.Uri = request.Uri.Reroute(apiVersion: ParentOptions.ApiVersion, isWorkflow: request.Content!.IsWorkflow());
         }
     }
 }
