@@ -4,9 +4,7 @@ using Azure.AI.Agents.Persistent;
 using Azure.Core;
 using Azure.Core.Pipeline;
 
-var options = new PersistentAgentsAdministrationClientOptions();
-options.AddPolicy(new RoutingPolicy(), HttpPipelinePosition.PerCall);
-var client = new PersistentAgentsClient(Environment.GetEnvironmentVariable("AZURE_AI_AGENTS_ENDPOINT")?.TrimEnd('/'), new DefaultAzureCredential(), options);
+var client = new PersistentAgentsClient(Environment.GetEnvironmentVariable("AZURE_AI_AGENTS_ENDPOINT")?.TrimEnd('/'), new DefaultAzureCredential(), ClientOptions.Agents());
 
 // create the single agents
 var teacherAgent = await client.Administration.CreateAgentAsync(
