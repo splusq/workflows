@@ -42,39 +42,36 @@ rootCommand.SetHandler(async (string endpoint, string audience, string apiVersio
         // publish the workflow
         workflow = await Workflows.Build<TwoAgentMathState>(studentAgent.Value.Id, studentAgent.Value.Name, teacherAgent.Value.Id, teacherAgent.Value.Name).PublishWorkflowAsync();
 
-        await foreach (var userMessage in Console.Readlines("User> "))
-        {
-            // threadId is used to store the thread ID
-            var threadId = string.Empty;
+        // threadId is used to store the thread ID
+        var threadId = string.Empty;
 
-            // create run
-            await foreach (var run in client.CreateThreadAndRunStreamingAsync(workflow.Id, new()
+        // create run
+        await foreach (var run in client.CreateThreadAndRunStreamingAsync(workflow.Id, new()
+        {
+            InitialMessages = { "Go" }
+        }))
+        {
+            if (run is MessageContentUpdate contentUpdate)
             {
-                InitialMessages = { userMessage }
-            }))
+                Console.Write(contentUpdate.Text);
+            }
+            else if (run is RunUpdate runUpdate)
             {
-                if (run is MessageContentUpdate contentUpdate)
+                if (threadId == string.Empty)
                 {
-                    Console.Write(contentUpdate.Text);
+                    threadId = runUpdate.Value.ThreadId;
                 }
-                else if (run is RunUpdate runUpdate)
+                if (runUpdate.UpdateKind == StreamingUpdateReason.RunInProgress && !runUpdate.Value.Id.StartsWith("wf_run"))
                 {
-                    if (threadId == string.Empty)
-                    {
-                        threadId = runUpdate.Value.ThreadId;
-                    }
-                    if (runUpdate.UpdateKind == StreamingUpdateReason.RunInProgress && !runUpdate.Value.Id.StartsWith("wf_run"))
-                    {
-                        Console.WriteLine();
-                        Console.Write($"{runUpdate.Value.Metadata["x-agent-name"]}> ");
-                    }
+                    Console.WriteLine();
+                    Console.Write($"{runUpdate.Value.Metadata["x-agent-name"]}> ");
                 }
             }
-
-            // delete thread, so we can start over
-            Console.WriteLine($"\nDeleting thread {threadId!}...");
-            await client.DeleteThreadAsync(threadId!);
         }
+
+        // delete thread, so we can start over
+        Console.WriteLine($"\nDeleting thread {threadId!}...");
+        await client.DeleteThreadAsync(threadId!);
     }
     catch (Exception ex)
     {

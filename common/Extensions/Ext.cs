@@ -149,25 +149,4 @@ public static class Ext
         }
         return false;
     }
-
-    extension(Console)
-    {
-        public static async IAsyncEnumerable<string> Readlines(string prompt)
-        {
-            while (true)
-            {
-                Console.Write(prompt);
-
-                var input = Console.ReadLine();
-                if (string.IsNullOrEmpty(input))
-                {
-                    break;
-                }
-
-                yield return input;
-            }
-
-            await Task.Yield();
-        }
-    }
 }
