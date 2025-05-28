@@ -13,7 +13,7 @@ public static class Ext
         // Send the request
         using var message = pipeline.CreateMessage();
         message.Request.Method = "POST";
-        message.Request.Uri = new Uri("agents", uriKind: UriKind.Relative);
+        message.Request.Uri = new Uri("https://localhost/agents");
         message.Request.Content = System.ClientModel.BinaryContent.Create(new MemoryStream(Encoding.UTF8.GetBytes(await process.ToJsonAsync())));
         message.Request.Headers.Add("Content-Type", "application/json");
 
@@ -41,11 +41,10 @@ public static class Ext
         // Send the request
         using var message = pipeline.CreateMessage();
         message.Request.Method = RequestMethod.Post;
-        message.Request.Uri.Reset(new Uri("agents", uriKind: UriKind.Relative));
+        message.Request.Uri.Reset(new Uri("https://localhost/agents"));
         message.Request.Content = RequestContent.Create(new MemoryStream(Encoding.UTF8.GetBytes(await process.ToJsonAsync())));
         message.Request.Headers.Add("Content-Type", "application/json");
 
-        Console.WriteLine("Creating workflow");
         await pipeline.SendAsync(message, default).ConfigureAwait(false);
 
         if (message.Response?.Status < 200 || message.Response?.Status >= 300)
@@ -70,7 +69,7 @@ public static class Ext
         // Send the request
         using var message = pipeline.CreateMessage();
         message.Request.Method = "DELETE";
-        message.Request.Uri = new Uri($"agents/{workflow.Id}", uriKind: UriKind.Relative);
+        message.Request.Uri = new Uri($"https://localhost/agents/{workflow.Id}");
 
         await pipeline.SendAsync(message).ConfigureAwait(false);
 
@@ -85,7 +84,7 @@ public static class Ext
         // Send the request
         using var message = pipeline.CreateMessage();
         message.Request.Method = RequestMethod.Delete;
-        message.Request.Uri.Reset(new Uri($"agents/{workflow.Id}", uriKind: UriKind.Relative));
+        message.Request.Uri.Reset(new Uri($"https://localhost/agents/{workflow.Id}"));
 
         await pipeline.SendAsync(message, default).ConfigureAwait(false);
 
