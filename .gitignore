@@ -7,3 +7,5 @@ Debug/
 Release/
 **/Debug
 **/Release
+**/CopilotIndices
+.vs/
