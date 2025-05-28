@@ -12,7 +12,7 @@ public class Agent
     {
         if (!Uri.TryCreate(endpoint, UriKind.Absolute, out var _endpoint))
         {
-            throw new ArgumentException("The AZURE_AI_AGENTS_ENDPOINT environment variable must be a valid URI.");
+            throw new ArgumentException("The endpoint must be an absolute URI.", nameof(endpoint));
         }
 
         this.client = new AzureOpenAIClient(_endpoint, new DefaultAzureCredential(), new AzureOpenAIClientOptions().AddPolicy(_endpoint, audience, apiVersion)).GetAssistantClient();
