@@ -1,6 +1,6 @@
+using System.ClientModel.Primitives;
 using Azure.Core;
 using Azure.Core.Pipeline;
-using System.ClientModel.Primitives;
 
 public class HttpPipelineRoutingPolicy : HttpPipelinePolicy
 {
@@ -38,10 +38,12 @@ public class HttpPipelineRoutingPolicy : HttpPipelinePolicy
 
 public class PipelineRoutingPolicy : PipelinePolicy
 {
+    private readonly Uri endpoint;
     private readonly string apiVersion;
 
-    public PipelineRoutingPolicy(string apiVersion)
+    public PipelineRoutingPolicy(Uri endpoint, string apiVersion)
     {
+        this.endpoint = endpoint ?? throw new ArgumentNullException(nameof(endpoint));
         this.apiVersion = apiVersion ?? throw new ArgumentNullException(nameof(apiVersion));
     }
 
@@ -61,7 +63,12 @@ public class PipelineRoutingPolicy : PipelinePolicy
     {
         if (request.Uri is null)
         {
-            throw new ArgumentException(nameof(request.Uri));
+
+            throw new ArgumentNullException(nameof(request.Uri));
+        }
+        else if (!request.Uri.IsAbsoluteUri)
+        {
+            request.Uri = new Uri(String.Format($"{this.endpoint.ToString().TrimEnd('/')}/{request.Uri.ToString()}?api-version={this.apiVersion}"));
         }
 
         request.Uri = request.Uri.Reroute(apiVersion: apiVersion, isWorkflow: request.Content!.IsWorkflow());

@@ -1,10 +1,6 @@
-using Azure.Identity;
-using System.ClientModel.Primitives;
-using Azure.AI.Agents.Persistent;
-using Azure.Core;
-using Azure.Core.Pipeline;
 using System.CommandLine;
-using System.CommandLine.Invocation;
+using Azure.AI.Agents.Persistent;
+using Azure.Identity;
 
 var endpointOption = new Option<string>("--endpoint", description: "The service endpoint URI.") { IsRequired = true };
 var audienceOption = new Option<string>("--audience", description: "The audience for authentication.") { IsRequired = true };
@@ -42,7 +38,7 @@ rootCommand.SetHandler(async (string endpoint, string audience, string apiVersio
     try
     {
         // publish the workflow
-        workflow = await Workflows.Build<TwoAgentMathState>(studentAgent.Value.Id, studentAgent.Value.Name, teacherAgent.Value.Id, teacherAgent.Value.Name).PublishWorkflowAsync();
+        workflow = await client.Administration.Pipeline.PublishWorkflowAsync(Workflows.Build<TwoAgentMathState>(studentAgent.Value.Id, studentAgent.Value.Name, teacherAgent.Value.Id, teacherAgent.Value.Name));
 
         // threadId is used to store the thread ID
         PersistentAgentThread thread = await client.Threads.CreateThreadAsync();
@@ -91,14 +87,7 @@ rootCommand.SetHandler(async (string endpoint, string audience, string apiVersio
 
         // // delete workflow
         Console.WriteLine($"Deleting workflow {workflow?.Id}...");
-        try
-        {
-            await workflow!.DeleteWorkflowAsync();
-        }
-        catch
-        {
-            // ignore
-        }
+        await client.Administration.Pipeline.DeleteWorkflowAsync(workflow!);
     }
 }, endpointOption, audienceOption, apiVersionOption);
 

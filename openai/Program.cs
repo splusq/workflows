@@ -1,6 +1,5 @@
-using OpenAI.Assistants;
 using System.CommandLine;
-using System.CommandLine.Invocation;
+using OpenAI.Assistants;
 
 var endpointOption = new Option<string>("--endpoint", description: "The service endpoint URI.") { IsRequired = true };
 var audienceOption = new Option<string>("--audience", description: "The audience for authentication.") { IsRequired = true };
@@ -15,7 +14,7 @@ var rootCommand = new RootCommand
 
 rootCommand.SetHandler(async (string endpoint, string audience, string apiVersion) =>
 {
-    AssistantClient client = new Agent(endpoint, apiVersion);
+    AssistantClient client = new Agent(endpoint, audience, apiVersion);
 
     // create the single agents
     var teacherAgent = await client.CreateAssistantAsync("gpt-4o", new()
@@ -40,7 +39,7 @@ rootCommand.SetHandler(async (string endpoint, string audience, string apiVersio
     try
     {
         // publish the workflow
-        workflow = await Workflows.Build<TwoAgentMathState>(studentAgent.Value.Id, studentAgent.Value.Name, teacherAgent.Value.Id, teacherAgent.Value.Name).PublishWorkflowAsync();
+        workflow = await client.Pipeline.PublishWorkflowAsync(Workflows.Build<TwoAgentMathState>(studentAgent.Value.Id, studentAgent.Value.Name, teacherAgent.Value.Id, teacherAgent.Value.Name));
 
         // threadId is used to store the thread ID
         var threadId = string.Empty;
@@ -91,14 +90,7 @@ rootCommand.SetHandler(async (string endpoint, string audience, string apiVersio
 
         // delete workflow
         Console.WriteLine($"Deleting workflow {workflow?.Id}...");
-        try
-        {
-            await workflow!.DeleteWorkflowAsync();
-        }
-        catch
-        {
-            // ignore
-        }
+        await client.Pipeline.DeleteWorkflowAsync(workflow!);
     }
 }, endpointOption, audienceOption, apiVersionOption);
 

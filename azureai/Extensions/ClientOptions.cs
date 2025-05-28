@@ -1,7 +1,5 @@
 using Azure.AI.Agents.Persistent;
 using Azure.Core;
-using Azure.Core.Pipeline;
-using System.ClientModel.Primitives;
 
 public static class Extension
 {
