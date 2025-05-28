@@ -1,72 +1,97 @@
-using Azure.Identity;
-using System.Text.Json;
+using System.ClientModel.Primitives;
 using System.Text;
-using Microsoft.SemanticKernel;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using Azure.Core;
+using Azure.Core.Pipeline;
+using Microsoft.SemanticKernel;
 
 public static class Ext
 {
-    public static Uri WorkflowEndpoint
+    public static async Task<Workflow> PublishWorkflowAsync<T>(this ClientPipeline pipeline, FoundryProcessBuilder<T> process) where T : class, new()
     {
-        get
-        {
-            if (!Uri.TryCreate(Environment.GetEnvironmentVariable("AZURE_AI_AGENTS_ENDPOINT")?.Replace("/agents/v1.0", "/workflows/v1.0"), UriKind.Absolute, out var uri))
-            {
-                throw new ArgumentException("The AZURE_AI_AGENTS_ENDPOINT environment variable must be a valid URI.");
-            }
+        // Send the request
+        using var message = pipeline.CreateMessage();
+        message.Request.Method = "POST";
+        message.Request.Uri = new Uri("https://localhost/agents");
+        message.Request.Content = System.ClientModel.BinaryContent.Create(new MemoryStream(Encoding.UTF8.GetBytes(await process.ToJsonAsync())));
+        message.Request.Headers.Add("Content-Type", "application/json");
 
-            return uri;
+        await pipeline.SendAsync(message).ConfigureAwait(false);
+
+        if (message.Response?.Status < 200 || message.Response?.Status >= 300)
+        {
+            var errorContent = await message.Response.Content.AsJsonAsync().ConfigureAwait(false);
+
+            throw new Exception($"Error publishing workflow: {errorContent}");
+        }   
+
+        var responseJson = await message.Response!.Content.AsJsonAsync().ConfigureAwait(false) ?? string.Empty;
+
+        using var doc = JsonDocument.Parse(responseJson);
+        var workflowId = doc.RootElement.GetProperty("id").GetString() ?? string.Empty;
+
+        Console.WriteLine($"Creating workflow {workflowId}...");
+
+        return new Workflow(workflowId);
+    }
+
+    public static async Task<Workflow> PublishWorkflowAsync<T>(this HttpPipeline pipeline, FoundryProcessBuilder<T> process) where T : class, new()
+    {
+        // Send the request
+        using var message = pipeline.CreateMessage();
+        message.Request.Method = RequestMethod.Post;
+        message.Request.Uri.Reset(new Uri("https://localhost/agents"));
+        message.Request.Content = RequestContent.Create(new MemoryStream(Encoding.UTF8.GetBytes(await process.ToJsonAsync())));
+        message.Request.Headers.Add("Content-Type", "application/json");
+
+        await pipeline.SendAsync(message, default).ConfigureAwait(false);
+
+        if (message.Response?.Status < 200 || message.Response?.Status >= 300)
+        {
+            var errorContent = await message.Response.Content.AsJsonAsync().ConfigureAwait(false);
+
+            throw new Exception($"Error publishing workflow: {errorContent}");
+        }
+
+        var responseJson = await message.Response!.Content.AsJsonAsync().ConfigureAwait(false) ?? string.Empty;
+
+        using var doc = JsonDocument.Parse(responseJson);
+        var workflowId = doc.RootElement.GetProperty("id").GetString() ?? string.Empty;
+
+        Console.WriteLine($"Creating workflow {workflowId}...");
+
+        return new Workflow(workflowId);
+    }
+
+    public static async Task DeleteWorkflowAsync(this ClientPipeline pipeline, Workflow workflow)
+    {
+        // Send the request
+        using var message = pipeline.CreateMessage();
+        message.Request.Method = "DELETE";
+        message.Request.Uri = new Uri($"https://localhost/agents/{workflow.Id}");
+
+        await pipeline.SendAsync(message).ConfigureAwait(false);
+
+        if (message.Response?.Status < 200 || message.Response?.Status >= 300)
+        {
+            throw new Exception($"Failed to delete workflow: {message.Response?.Status} {message.Response?.ReasonPhrase}");
         }
     }
 
-    private static HttpClient _client;
-
-    static Ext()
+    public static async Task DeleteWorkflowAsync(this HttpPipeline pipeline, Workflow workflow)
     {
-        _client = new HttpClient() { BaseAddress = WorkflowEndpoint };
-        _client.DefaultRequestHeaders.Add("Authorization", $"Bearer {(new DefaultAzureCredential().GetTokenAsync(new Azure.Core.TokenRequestContext(new[] { Environment.GetEnvironmentVariable("AZURE_AI_AUDIENCE")! }))).Result.Token}");
-    }
+        // Send the request
+        using var message = pipeline.CreateMessage();
+        message.Request.Method = RequestMethod.Delete;
+        message.Request.Uri.Reset(new Uri($"https://localhost/agents/{workflow.Id}"));
 
-    public static async Task<Workflow> PublishWorkflowAsync<T>(this FoundryProcessBuilder<T> process) where T : class, new()
-    {
-        var request = new HttpRequestMessage(HttpMethod.Post, $"agents?api-version={Environment.GetEnvironmentVariable("AZURE_AI_API_VERSION")}")
+        await pipeline.SendAsync(message, default).ConfigureAwait(false);
+
+        if (message.Response?.Status < 200 || message.Response?.Status >= 300)
         {
-            Content = new StringContent(await process.ToJsonAsync(), Encoding.UTF8, "application/json")
-        };
-
-        // Console.WriteLine($"Posting workflow to {_client.BaseAddress}{request.RequestUri}");
-        // Console.WriteLine(definition);
-
-        var response = await _client.SendAsync(request).ConfigureAwait(false);
-        try
-        {
-            response.EnsureSuccessStatusCode();
+            throw new Exception($"Failed to delete workflow: {message.Response?.Status} {message.Response?.ReasonPhrase}");
         }
-        catch (HttpRequestException ex)
-        {
-            var errorContent = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
-            throw new Exception($"Error publishing workflow: {errorContent}", ex);
-        }
-
-        var json = await response.Content.ReadAsStringAsync().ConfigureAwait(false) ?? string.Empty;
-
-        using (var doc = JsonDocument.Parse(json))
-        {
-            var workflowId = doc.RootElement.GetProperty("id").GetString() ?? string.Empty;
-
-            Console.WriteLine($"Creating workflow {workflowId}...");
-
-            return new Workflow(workflowId);
-        }
-    }
-
-    public static async Task DeleteWorkflowAsync(this Workflow workflow)
-    {
-        var request = new HttpRequestMessage(HttpMethod.Delete, $"agents/{workflow.Id}");
-        var response = await _client.SendAsync(request).ConfigureAwait(false);
-
-        response.EnsureSuccessStatusCode();
     }
 
     public static Uri Reroute(this Uri uri, string apiVersion, bool isWorkflow)
@@ -74,12 +99,19 @@ public static class Ext
         UriBuilder uriBuilder = new(uri);
 
         // Check if URI contains "run" and body contains assistant_id starting with "wf_"
-        if (uri.ToString().Contains("runs", StringComparison.OrdinalIgnoreCase))
+        bool isRunOrAgentPath =
+           uri.ToString().Contains("runs", StringComparison.OrdinalIgnoreCase) ||
+           uri.AbsolutePath.EndsWith("/agents");
+
+        bool isWorkflowInstance =
+            uri.AbsolutePath.Contains("/wf_agent");
+
+        bool shouldRewriteToWorkflow =
+            (isRunOrAgentPath && isWorkflow) || isWorkflowInstance;
+
+        if (shouldRewriteToWorkflow)
         {
-            if (isWorkflow)
-            {
-                uriBuilder.Path = Regex.Replace(uriBuilder.Path, "/agents/v1.0", "/workflows/v1.0");
-            }
+            uriBuilder.Path = Regex.Replace(uriBuilder.Path, "/agents/v1.0", "/workflows/v1.0");
         }
 
         // Remove the "/openai" request URI infix, if present
@@ -97,9 +129,21 @@ public static class Ext
         return uriBuilder.Uri;
     }
 
-    private static bool StreamContainsWorkflowPattern(Stream stream)
+    public static async Task<string> AsJsonAsync(this BinaryData data)
     {
-        var pattern = Encoding.UTF8.GetBytes("\"assistant_id\":\"wf_");
+        if (data == null || data.Length == 0)
+        {
+            return string.Empty;
+        }
+
+        using var reader = new StreamReader(data.ToStream(), Encoding.UTF8);
+
+        return await reader.ReadToEndAsync();
+    }
+
+    private static bool StreamContainsWorkflowPattern(Stream stream, string body)
+    {
+        var pattern = Encoding.UTF8.GetBytes(body);
         stream.Position = 0;
         int matchIndex = 0;
         int b;
@@ -126,7 +170,7 @@ public static class Ext
         {
             using var stream = new MemoryStream();
             content?.WriteTo(stream, default);
-            return StreamContainsWorkflowPattern(stream);
+            return StreamContainsWorkflowPattern(stream, "\"assistant_id\":\"wf_") || StreamContainsWorkflowPattern(stream, "\"workflow_version\"");
         }
         catch
         {
@@ -141,33 +185,12 @@ public static class Ext
         {
             using var stream = new MemoryStream();
             content?.WriteTo(stream, default);
-            return StreamContainsWorkflowPattern(stream);
+            return StreamContainsWorkflowPattern(stream, "\"assistant_id\":\"wf_") || StreamContainsWorkflowPattern(stream, "\"workflow_version\"");
         }
         catch
         {
             // ignore
         }
         return false;
-    }
-
-    extension(Console)
-    {
-        public static async IAsyncEnumerable<string> Readlines(string prompt)
-        {
-            while (true)
-            {
-                Console.Write(prompt);
-
-                var input = Console.ReadLine();
-                if (string.IsNullOrEmpty(input))
-                {
-                    break;
-                }
-
-                yield return input;
-            }
-
-            await Task.Yield();
-        }
     }
 }

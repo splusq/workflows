@@ -1,42 +1,51 @@
-using Azure.Identity;
-using System.ClientModel.Primitives;
+using System.CommandLine;
 using Azure.AI.Agents.Persistent;
-using Azure.Core;
-using Azure.Core.Pipeline;
+using Azure.Identity;
 
-var client = new PersistentAgentsClient(Environment.GetEnvironmentVariable("AZURE_AI_AGENTS_ENDPOINT")?.TrimEnd('/'), new DefaultAzureCredential(), ClientOptions.Agents());
+var endpointOption = new Option<string>("--endpoint", description: "The service endpoint URI.") { IsRequired = true };
+var audienceOption = new Option<string>("--audience", description: "The audience for authentication.") { IsRequired = true };
+var apiVersionOption = new Option<string>("--apiVersion", description: "The API version.") { IsRequired = true };
 
-// create the single agents
-var teacherAgent = await client.Administration.CreateAgentAsync(
-    model: "gpt-4o",
-    name: "Teacher",
-    instructions: "You are a teacher that create pre-school math question for student and check answer.\nIf the answer is correct, you stop the conversation by saying [COMPLETE].\nIf the answer is wrong, you ask student to fix it."
-);
-Console.WriteLine($"Creating agent {teacherAgent.Value.Name} ({teacherAgent.Value.Id})...");
-
-var studentAgent = await client.Administration.CreateAgentAsync(
-    model: "gpt-4o",
-    name: "Student",
-    instructions: "You are a student that answer question from teacher, when teacher gives you question you answer them."
-);
-
-Console.WriteLine($"Creating agent {studentAgent.Value.Name} ({studentAgent.Value.Id})...");
-
-Workflow? workflow = null;
-
-try
+var rootCommand = new RootCommand
 {
-    // publish the workflow
-    workflow = await Workflows.Build<TwoAgentMathState>(studentAgent.Value.Id, studentAgent.Value.Name, teacherAgent.Value.Id, teacherAgent.Value.Name).PublishWorkflowAsync();
+    endpointOption,
+    audienceOption,
+    apiVersionOption
+};
 
-    await foreach (var userMessage in Console.Readlines("User> "))
+rootCommand.SetHandler(async (string endpoint, string audience, string apiVersion) =>
+{
+    var client = new PersistentAgentsClient(endpoint.TrimEnd('/'), new DefaultAzureCredential(), new PersistentAgentsAdministrationClientOptions().AddPolicy(endpoint, apiVersion));
+
+    // create the single agents
+    var teacherAgent = await client.Administration.CreateAgentAsync(
+        model: "gpt-4o",
+        name: "Teacher",
+        instructions: "You are a teacher that create pre-school math question for student and check answer.\nIf the answer is correct, you stop the conversation by saying [COMPLETE].\nIf the answer is wrong, you ask student to fix it."
+    );
+    Console.WriteLine($"Creating agent {teacherAgent.Value.Name} ({teacherAgent.Value.Id})...");
+
+    var studentAgent = await client.Administration.CreateAgentAsync(
+        model: "gpt-4o",
+        name: "Student",
+        instructions: "You are a student that answer question from teacher, when teacher gives you question you answer them."
+    );
+
+    Console.WriteLine($"Creating agent {studentAgent.Value.Name} ({studentAgent.Value.Id})...");
+
+    Workflow? workflow = null;
+
+    try
     {
+        // publish the workflow
+        workflow = await client.Administration.Pipeline.PublishWorkflowAsync(Workflows.Build<TwoAgentMathState>(studentAgent.Value.Id, studentAgent.Value.Name, teacherAgent.Value.Id, teacherAgent.Value.Name));
+
         // threadId is used to store the thread ID
         PersistentAgentThread thread = await client.Threads.CreateThreadAsync();
         PersistentThreadMessage message = await client.Messages.CreateMessageAsync(
             threadId: thread.Id,
             MessageRole.User,
-            content: userMessage
+            content: "Go"
         );
 
         // create run
@@ -60,31 +69,26 @@ try
         Console.WriteLine($"\nDeleting thread {thread?.Id}...");
         await client.Threads.DeleteThreadAsync(thread?.Id);
     }
-}
-catch (Exception ex)
-{
-    Console.WriteLine($"Error: {ex.Message}");
-}
-finally
-{
-    Console.WriteLine();
-
-    // delete agent
-    Console.WriteLine($"Deleting agent {teacherAgent?.Value.Name} {teacherAgent?.Value.Id}...");
-    await client.Administration.DeleteAgentAsync(teacherAgent?.Value.Id);
-
-    // // delete agent
-    Console.WriteLine($"Deleting agent {studentAgent?.Value.Name} {studentAgent?.Value.Id}...");
-    await client.Administration.DeleteAgentAsync(studentAgent?.Value.Id);
-
-    // // delete workflow
-    Console.WriteLine($"Deleting workflow {workflow?.Id}...");
-    try
+    catch (Exception ex)
     {
-        await workflow!.DeleteWorkflowAsync();
+        Console.WriteLine($"Error: {ex.Message}");
     }
-    catch
+    finally
     {
-        // ignore
+        Console.WriteLine();
+
+        // delete agent
+        Console.WriteLine($"Deleting agent {teacherAgent?.Value.Name} {teacherAgent?.Value.Id}...");
+        await client.Administration.DeleteAgentAsync(teacherAgent?.Value.Id);
+
+        // // delete agent
+        Console.WriteLine($"Deleting agent {studentAgent?.Value.Name} {studentAgent?.Value.Id}...");
+        await client.Administration.DeleteAgentAsync(studentAgent?.Value.Id);
+
+        // // delete workflow
+        Console.WriteLine($"Deleting workflow {workflow?.Id}...");
+        await client.Administration.Pipeline.DeleteWorkflowAsync(workflow!);
     }
-}
+}, endpointOption, audienceOption, apiVersionOption);
+
+return await rootCommand.InvokeAsync(args);
