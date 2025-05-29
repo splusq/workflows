@@ -3,7 +3,7 @@ using Azure.Core;
 
 public static class Extension
 {
-    public static PersistentAgentsAdministrationClientOptions AddPolicy(this PersistentAgentsAdministrationClientOptions options, string endpoint, string apiVersion)
+    public static PersistentAgentsAdministrationClientOptions WithPolicy(this PersistentAgentsAdministrationClientOptions options, string endpoint, string apiVersion)
     {
         if (!Uri.TryCreate(endpoint, UriKind.Absolute, out var _endpoint))
         {

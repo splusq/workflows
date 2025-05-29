@@ -15,7 +15,7 @@ var rootCommand = new RootCommand
 
 rootCommand.SetHandler(async (string endpoint, string audience, string apiVersion) =>
 {
-    var client = new PersistentAgentsClient(endpoint.TrimEnd('/'), new DefaultAzureCredential(), new PersistentAgentsAdministrationClientOptions().AddPolicy(endpoint, apiVersion));
+    var client = new PersistentAgentsClient(endpoint.TrimEnd('/'), new DefaultAzureCredential(), new PersistentAgentsAdministrationClientOptions().WithPolicy(endpoint, apiVersion));
 
     // create the single agents
     var teacherAgent = await client.Administration.CreateAgentAsync(
