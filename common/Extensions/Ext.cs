@@ -26,7 +26,7 @@ public static class Ext
             var errorContent = await message.Response.Content.AsJsonAsync().ConfigureAwait(false);
 
             throw new Exception($"Error publishing workflow: {errorContent}");
-        }   
+        }
 
         var responseJson = await message.Response!.Content.AsJsonAsync().ConfigureAwait(false) ?? string.Empty;
 
@@ -158,26 +158,43 @@ public static class Ext
         return await reader.ReadToEndAsync();
     }
 
-    private static bool StreamContainsWorkflowPattern(Stream stream, string body)
+    private static bool StreamContainsWorkflowPattern(Stream stream, params string[] bodies)
     {
-        var pattern = Encoding.UTF8.GetBytes(body);
+        var patterns = bodies.Select(b => Encoding.UTF8.GetBytes(b)).ToArray();
         stream.Position = 0;
-        int matchIndex = 0;
         int b;
+        var matchIndexes = new int[patterns.Length];
         while ((b = stream.ReadByte()) != -1)
         {
-            if (b == pattern[matchIndex])
+            for (int i = 0; i < patterns.Length; i++)
             {
-                matchIndex++;
-                if (matchIndex == pattern.Length)
-                    return true;
-            }
-            else
-            {
-                matchIndex = (b == pattern[0]) ? 1 : 0;
+                if (b == patterns[i][matchIndexes[i]])
+                {
+                    matchIndexes[i]++;
+                    if (matchIndexes[i] == patterns[i].Length)
+                        return true;
+                }
+                else
+                {
+                    matchIndexes[i] = (b == patterns[i][0]) ? 1 : 0;
+                }
             }
         }
+        return false;
+    }
 
+    private static bool IsWorkflowInternal<T>(T content, Action<T, Stream> writeToStream)
+    {
+        try
+        {
+            using var stream = new MemoryStream();
+            writeToStream(content, stream);
+            return StreamContainsWorkflowPattern(stream, @"""assistant_id"":""wf_", @"""workflow_version");
+        }
+        catch
+        {
+            // ignore
+        }
         return false;
     }
 
@@ -189,21 +206,5 @@ public static class Ext
     public static bool IsWorkflow(this System.ClientModel.BinaryContent content)
     {
         return IsWorkflowInternal(content, (c, s) => c?.WriteTo(s, default));
-    }
-
-    private static bool IsWorkflowInternal<T>(T content, Action<T, Stream> writeToStream)
-    {
-        try
-        {
-            using var stream = new MemoryStream();
-            writeToStream(content, stream);
-            return StreamContainsWorkflowPattern(stream, @"""assistant_id"":""wf_") ||
-                   StreamContainsWorkflowPattern(stream, @"""workflow_version""");
-        }
-        catch
-        {
-            // ignore
-        }
-        return false;
     }
 }
