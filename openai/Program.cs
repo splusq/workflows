@@ -14,7 +14,7 @@ var rootCommand = new RootCommand
 
 rootCommand.SetHandler(async (string endpoint, string audience, string apiVersion) =>
 {
-    AssistantClient client = new Agent(endpoint, audience, apiVersion);
+    AssistantClient client = new AssistantClientWithOptions(endpoint, audience, apiVersion);
 
     // create the single agents
     var teacherAgent = await client.CreateAssistantAsync("gpt-4o", new()

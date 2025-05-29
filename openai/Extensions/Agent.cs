@@ -4,11 +4,11 @@ using Azure.Identity;
 using OpenAI.Assistants;
 
 
-public class Agent
+public class AssistantClientWithOptions
 {
     private readonly AssistantClient client;
 
-    public Agent(string endpoint, string audience, string apiVersion)
+    public AssistantClientWithOptions(string endpoint, string audience, string apiVersion)
     {
         if (!Uri.TryCreate(endpoint, UriKind.Absolute, out var _endpoint))
         {
@@ -18,7 +18,7 @@ public class Agent
         this.client = new AzureOpenAIClient(_endpoint, new DefaultAzureCredential(), new AzureOpenAIClientOptions().WithPolicy(_endpoint, audience, apiVersion)).GetAssistantClient();
     }
 
-    public static implicit operator AssistantClient(Agent agent) => agent.client;
+    public static implicit operator AssistantClient(AssistantClientWithOptions agent) => agent.client;
 }
 
 public static class Extension
