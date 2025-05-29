@@ -1,4 +1,5 @@
 using System.ClientModel.Primitives;
+using System.Collections;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -12,9 +13,10 @@ public static class Ext
     {
         // Send the request
         using var message = pipeline.CreateMessage();
+        var payload = await process.ToJsonAsync();
         message.Request.Method = "POST";
         message.Request.Uri = new Uri("https://localhost/agents");
-        message.Request.Content = System.ClientModel.BinaryContent.Create(new MemoryStream(Encoding.UTF8.GetBytes(await process.ToJsonAsync())));
+        message.Request.Content = System.ClientModel.BinaryContent.Create(new MemoryStream(Encoding.UTF8.GetBytes(payload)));
         message.Request.Headers.Add("Content-Type", "application/json");
 
         await pipeline.SendAsync(message).ConfigureAwait(false);
@@ -111,7 +113,22 @@ public static class Ext
 
         if (shouldRewriteToWorkflow)
         {
-            uriBuilder.Path = Regex.Replace(uriBuilder.Path, "/agents/v1.0", "/workflows/v1.0");
+            // 1RP
+            if (uriBuilder.Host.EndsWith("services.ai.azure.com", StringComparison.OrdinalIgnoreCase))
+            {
+                var items = new ArrayList(uriBuilder.Path.Split('/', StringSplitOptions.RemoveEmptyEntries));
+                if (items.Count > 3)
+                {
+                    items.Insert(3, "workflows");
+                }
+
+                uriBuilder.Path = string.Join("/", items.ToArray());
+            }
+            else
+            {
+                // Non-1RP (Machine Learning RP)
+                uriBuilder.Path = Regex.Replace(uriBuilder.Path, "/agents/v1.0", "/workflows/v1.0", RegexOptions.IgnoreCase);
+            }
         }
 
         // Remove the "/openai" request URI infix, if present
@@ -166,26 +183,22 @@ public static class Ext
 
     public static bool IsWorkflow(this RequestContent content)
     {
-        try
-        {
-            using var stream = new MemoryStream();
-            content?.WriteTo(stream, default);
-            return StreamContainsWorkflowPattern(stream, "\"assistant_id\":\"wf_") || StreamContainsWorkflowPattern(stream, "\"workflow_version\"");
-        }
-        catch
-        {
-            // ignore
-        }
-        return false;
+        return IsWorkflowInternal(content, (c, s) => c?.WriteTo(s, default));
     }
 
     public static bool IsWorkflow(this System.ClientModel.BinaryContent content)
     {
+        return IsWorkflowInternal(content, (c, s) => c?.WriteTo(s, default));
+    }
+
+    private static bool IsWorkflowInternal<T>(T content, Action<T, Stream> writeToStream)
+    {
         try
         {
             using var stream = new MemoryStream();
-            content?.WriteTo(stream, default);
-            return StreamContainsWorkflowPattern(stream, "\"assistant_id\":\"wf_") || StreamContainsWorkflowPattern(stream, "\"workflow_version\"");
+            writeToStream(content, stream);
+            return StreamContainsWorkflowPattern(stream, @"""assistant_id"":""wf_") ||
+                   StreamContainsWorkflowPattern(stream, @"""workflow_version""");
         }
         catch
         {

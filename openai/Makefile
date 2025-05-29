@@ -5,4 +5,4 @@ restore:
 build:
 	dotnet build
 run:
-	dotnet run --no-build -- --endpoint "https://eastus.api.azureml.ms/agents/v1.0/subscriptions/921496dc-987f-410f-bd57-426eb2611356/resourceGroups/ai-agents-karthik-eu/providers/Microsoft.MachineLearningServices/workspaces/project-demo-eu-fw7g/" --audience "https://management.azure.com/" --apiVersion "2025-05-15-preview"
+	dotnet run --no-build -- --endpoint "https://basicaccountjqqa.services.ai.azure.com/api/projects/e2e-tests/" --audience "https://ai.azure.com/" --apiVersion "2025-05-15-preview"

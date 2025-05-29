@@ -70,7 +70,6 @@ public class PipelineRoutingPolicy : PipelinePolicy
     {
         if (request.Uri is null)
         {
-
             throw new ArgumentNullException(nameof(request.Uri));
         }
         else if (request.Uri.IsLoopback)
