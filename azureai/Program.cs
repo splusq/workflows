@@ -3,17 +3,15 @@ using Azure.AI.Agents.Persistent;
 using Azure.Identity;
 
 var endpointOption = new Option<string>("--endpoint", description: "The service endpoint URI.") { IsRequired = true };
-var audienceOption = new Option<string>("--audience", description: "The audience for authentication.") { IsRequired = true };
 var apiVersionOption = new Option<string>("--apiVersion", description: "The API version.") { IsRequired = true };
 
 var rootCommand = new RootCommand
 {
     endpointOption,
-    audienceOption,
     apiVersionOption
 };
 
-rootCommand.SetHandler(async (string endpoint, string audience, string apiVersion) =>
+rootCommand.SetHandler(async (string endpoint, string apiVersion) =>
 {
     var client = new PersistentAgentsClient(endpoint.TrimEnd('/'), new DefaultAzureCredential(), new PersistentAgentsAdministrationClientOptions().WithPolicy(endpoint, apiVersion));
 
@@ -89,6 +87,6 @@ rootCommand.SetHandler(async (string endpoint, string audience, string apiVersio
         Console.WriteLine($"Deleting workflow {workflow?.Id}...");
         await client.Administration.Pipeline.DeleteWorkflowAsync(workflow!);
     }
-}, endpointOption, audienceOption, apiVersionOption);
+}, endpointOption, apiVersionOption);
 
 return await rootCommand.InvokeAsync(args);
