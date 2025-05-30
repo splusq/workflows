@@ -36,7 +36,8 @@ rootCommand.SetHandler(async (string endpoint, string apiVersion) =>
     try
     {
         // publish the workflow
-        workflow = await client.Administration.Pipeline.PublishWorkflowAsync(Workflows.Build<TwoAgentMathState>(studentAgent.Value.Id, studentAgent.Value.Name, teacherAgent.Value.Id, teacherAgent.Value.Name));
+        var definition = Workflows.Build<TwoAgentMathState>(studentAgent.Value.Id, studentAgent.Value.Name, teacherAgent.Value.Id, teacherAgent.Value.Name);
+        workflow = await client.Administration.Pipeline.PublishWorkflowAsync(definition);
 
         // threadId is used to store the thread ID
         PersistentAgentThread thread = await client.Threads.CreateThreadAsync();
