@@ -11,7 +11,7 @@ using System.Text.RegularExpressions;
 
 public static class Ext
 {
-    public static async Task<Workflow> PublishWorkflowAsync<T>(this ClientPipeline pipeline, WorkflowBuilder workflowDefinition, string? id = null) where T : class, new()
+    public static async Task<Workflow> PublishWorkflowAsync(this ClientPipeline pipeline, WorkflowBuilder workflowDefinition, string? id = null)
     {
         // Send the request
         using var message = pipeline.CreateMessage();
@@ -40,7 +40,7 @@ public static class Ext
         return new Workflow(workflowId);
     }
 
-    public static async Task<Workflow> PublishWorkflowAsync<T>(this HttpPipeline pipeline, WorkflowBuilder workflowDefinition, string? id = null) where T : class, new()
+    public static async Task<Workflow> PublishWorkflowAsync(this HttpPipeline pipeline, WorkflowBuilder workflowDefinition, string? id = null)
     {
         // Send the request
         using var message = pipeline.CreateMessage();
