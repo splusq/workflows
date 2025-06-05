@@ -10,6 +10,5 @@
 
   <ItemGroup>
     <PackageReference Include="Azure.Identity" Version="1.13.2" />
-    <PackageReference Include="Microsoft.SemanticKernel.Process.Core" Version="1.53.0-alpha" />
   </ItemGroup>
 </Project>

@@ -28,7 +28,7 @@ public sealed class AgentActor
     private readonly Dictionary<string, string> _inputs = new Dictionary<string, string>();
     private readonly AgentActorOnEnterActionsBuilder _agentActorOnEnterActionsBuilder = new AgentActorOnEnterActionsBuilder();
     private readonly AgentActorOnCompleteActionsBuilder _agentActorOnCompleteActionsBuilder = new AgentActorOnCompleteActionsBuilder();
-    
+
     private string? _agent;
     private string? _agentId;
     private string? _thread;
@@ -50,7 +50,7 @@ public sealed class AgentActor
     /// <param name="agentId">The ID of the agent.</param>
     /// <param name="agentName">The name of the agent.</param>
     /// <returns>The updated <see cref="AgentActor"/> instance.</returns>
-    public AgentActor SetAgent(string agentId, string agentName = null)
+    public AgentActor SetAgent(string agentId, string? agentName = null)
     {
         if (string.IsNullOrEmpty(agentId))
         {
@@ -84,7 +84,7 @@ public sealed class AgentActor
     /// <param name="dynamicAgentId">The ID of the agent dynamically resolved at run-time from the value stored in the variable.</param>
     /// <param name="dynamicAgentName">The name of the agent dynamically resolved at run-time from the value stored in the variable.</param>
     /// <returns>The updated <see cref="AgentActor"/> instance.</returns>
-    public AgentActor SetAgent(UserDefinedVariableReference dynamicAgentId, UserDefinedVariableReference dynamicAgentName = null)
+    public AgentActor SetAgent(UserDefinedVariableReference dynamicAgentId, UserDefinedVariableReference? dynamicAgentName = null)
     {
         if (dynamicAgentId == null)
         {
@@ -266,7 +266,7 @@ public sealed class AgentActor
             }
             agentActor["inputs"] = inputs;
         }
-        
+
         this._agentActorOnEnterActionsBuilder.BuildJsontWith(agentActor);
         this._agentActorOnCompleteActionsBuilder.BuildJsonWith(agentActor);
 
