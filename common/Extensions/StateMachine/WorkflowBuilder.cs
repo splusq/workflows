@@ -1,6 +1,8 @@
-﻿
+﻿using System.Text.Json;
 using System.Text.Json.Nodes;
-    
+using YamlDotNet.Serialization;
+using YamlDotNet.Serialization.NamingConventions;
+
 /// <summary>
 /// Builder for creating workflow definitions using a fluent API.
 /// </summary>
@@ -256,5 +258,46 @@ public sealed class WorkflowBuilder
         }
 
         return workflow;
+    }
+
+    public string BuildYaml()
+    {
+        return new SerializerBuilder()
+            .WithNamingConvention(CamelCaseNamingConvention.Instance)
+            .ConfigureDefaultValuesHandling(DefaultValuesHandling.OmitNull)
+            .Build()
+            .Serialize(this.ToObject(this.BuildJson()));
+    }
+
+    /// <summary>
+    /// Converts a JsonNode to a regular .NET object structure (Dictionary, List, primitives)
+    /// </summary>
+    private object? ToObject(JsonNode? node)
+    {
+        if (node == null)
+            return null;
+
+        return node switch
+        {
+            JsonObject jsonObject => jsonObject.ToDictionary(
+                kvp => kvp.Key,
+                kvp => ToObject(kvp.Value)),
+
+            JsonArray jsonArray => jsonArray.Select(ToObject).ToList(),
+
+            JsonValue jsonValue => jsonValue.GetValueKind() switch
+            {
+                JsonValueKind.Null => null,
+                JsonValueKind.String => jsonValue.GetValue<string>(),
+                JsonValueKind.Number when jsonValue.TryGetValue<int>(out var intValue) => intValue,
+                JsonValueKind.Number when jsonValue.TryGetValue<long>(out var longValue) => longValue,
+                JsonValueKind.Number => jsonValue.GetValue<double>(),
+                JsonValueKind.True => true,
+                JsonValueKind.False => false,
+                _ => jsonValue.ToString()
+            },
+
+            _ => node.ToString()
+        };
     }
 }
