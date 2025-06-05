@@ -1,4 +1,4 @@
-﻿namespace common.Foundry
+﻿namespace common.StateMachine
 {
     public static class Workflows
     {

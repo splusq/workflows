@@ -32,7 +32,7 @@ public sealed class WorkflowBuilder
     /// <param name="description">The description of the variable.</param>
     /// <returns>The updated <see cref="WorkflowBuilder"/> instance.</returns>
     /// <exception cref="ArgumentException">Thrown when variable name is null, empty, or a variable with the same name (case-insensitive) already exists.</exception>
-    public WorkflowBuilder AddMessagesVariable(out MessagesVariableReference variable, string name, string description = null)
+    public WorkflowBuilder AddMessagesVariable(out MessagesVariableReference variable, string name, string? description = null)
     {
         if (string.IsNullOrEmpty(name))
             throw new ArgumentException("Variable name cannot be null or empty", nameof(name));
@@ -58,7 +58,7 @@ public sealed class WorkflowBuilder
     /// <param name="description">The description of the variable.</param>
     /// <returns>The updated <see cref="WorkflowBuilder"/> instance.</returns>
     /// <exception cref="ArgumentException">Thrown when variable name is null, empty, or a variable with the same name (case-insensitive) already exists.</exception>
-    public WorkflowBuilder AddThreadVariable(out ThreadVariableReference variable, string name, string description = null)
+    public WorkflowBuilder AddThreadVariable(out ThreadVariableReference variable, string name, string? description = null)
     {
         if (string.IsNullOrEmpty(name))
             throw new ArgumentException("Variable name cannot be null or empty", nameof(name));
@@ -85,7 +85,7 @@ public sealed class WorkflowBuilder
     /// <param name="defaultValue">The default value of the variable.</param>
     /// <returns>The updated <see cref="WorkflowBuilder"/> instance.</returns>
     /// <exception cref="ArgumentException">Thrown when variable name is null, empty, or a variable with the same name (case-insensitive) already exists.</exception>
-    public WorkflowBuilder AddUserDefinedVariable(out UserDefinedVariableReference variable, string name, string description = null, JsonNode defaultValue = null)
+    public WorkflowBuilder AddUserDefinedVariable(out UserDefinedVariableReference variable, string name, string? description = null, JsonNode? defaultValue = null)
     {
         if (string.IsNullOrEmpty(name))
             throw new ArgumentException("Variable name cannot be null or empty", nameof(name));
