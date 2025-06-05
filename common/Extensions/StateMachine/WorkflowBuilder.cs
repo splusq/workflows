@@ -9,8 +9,9 @@ public sealed class WorkflowBuilder
     private readonly string _name;
     private readonly string? _description;
     private readonly Dictionary<string, JsonObject> _variablesMap = new Dictionary<string, JsonObject>(StringComparer.OrdinalIgnoreCase);
-    private readonly Dictionary<string, JsonObject> _statesMap = new Dictionary<string, JsonObject>();
+    private readonly Dictionary<string, State> _statesMap = new Dictionary<string, State>();
     private readonly Dictionary<string, StateTransitionBuilder> _transitionBuilders = new Dictionary<string, StateTransitionBuilder>(StringComparer.InvariantCultureIgnoreCase);
+    private string? _startState = null;
 
     /// <summary>
     /// Creates a new instance of the <see cref="WorkflowBuilder"/> class.
@@ -31,15 +32,15 @@ public sealed class WorkflowBuilder
     /// <param name="description">The description of the variable.</param>
     /// <returns>The updated <see cref="WorkflowBuilder"/> instance.</returns>
     /// <exception cref="ArgumentException">Thrown when variable name is null, empty, or a variable with the same name (case-insensitive) already exists.</exception>
-    public WorkflowBuilder AddMessagesVariable(out MessagesVariableReference variable, string name, string description = null)
+    public WorkflowBuilder AddMessagesVariable(out MessagesVariableReference variable, string name, string? description = null)
     {
         if (string.IsNullOrEmpty(name))
             throw new ArgumentException("Variable name cannot be null or empty", nameof(name));
 
-        if (_variablesMap.ContainsKey(name))
+        if (this._variablesMap.ContainsKey(name))
             throw new ArgumentException($"A variable with the name '{name}' already exists", nameof(name));
 
-        _variablesMap.Add(name, new JsonObject
+        this._variablesMap.Add(name, new JsonObject
         {
             ["type"] = "messages",
             ["name"] = name,
@@ -57,15 +58,15 @@ public sealed class WorkflowBuilder
     /// <param name="description">The description of the variable.</param>
     /// <returns>The updated <see cref="WorkflowBuilder"/> instance.</returns>
     /// <exception cref="ArgumentException">Thrown when variable name is null, empty, or a variable with the same name (case-insensitive) already exists.</exception>
-    public WorkflowBuilder AddThreadVariable(out ThreadVariableReference variable, string name, string description = null)
+    public WorkflowBuilder AddThreadVariable(out ThreadVariableReference variable, string name, string? description = null)
     {
         if (string.IsNullOrEmpty(name))
             throw new ArgumentException("Variable name cannot be null or empty", nameof(name));
 
-        if (_variablesMap.ContainsKey(name))
+        if (this._variablesMap.ContainsKey(name))
             throw new ArgumentException($"A variable with the name '{name}' already exists", nameof(name));
 
-        _variablesMap.Add(name, new JsonObject
+        this._variablesMap.Add(name, new JsonObject
         {
             ["type"] = "thread",
             ["name"] = name,
@@ -84,12 +85,12 @@ public sealed class WorkflowBuilder
     /// <param name="defaultValue">The default value of the variable.</param>
     /// <returns>The updated <see cref="WorkflowBuilder"/> instance.</returns>
     /// <exception cref="ArgumentException">Thrown when variable name is null, empty, or a variable with the same name (case-insensitive) already exists.</exception>
-    public WorkflowBuilder AddUserDefinedVariable(out UserDefinedVariableReference variable, string name, string description = null, JsonNode defaultValue = null)
+    public WorkflowBuilder AddUserDefinedVariable(out UserDefinedVariableReference variable, string name, string? description = null, JsonNode? defaultValue = null)
     {
         if (string.IsNullOrEmpty(name))
             throw new ArgumentException("Variable name cannot be null or empty", nameof(name));
 
-        if (_variablesMap.ContainsKey(name))
+        if (this._variablesMap.ContainsKey(name))
             throw new ArgumentException($"A variable with the name '{name}' already exists", nameof(name));
 
         var jsonObject = new JsonObject
@@ -104,7 +105,7 @@ public sealed class WorkflowBuilder
             jsonObject["value"] = defaultValue;
         }
 
-        _variablesMap.Add(name, jsonObject);
+        this._variablesMap.Add(name, jsonObject);
         variable = new UserDefinedVariableReference(name);
         return this;
     }
@@ -112,29 +113,45 @@ public sealed class WorkflowBuilder
     /// <summary>
     /// Adds a state to the workflow.
     /// </summary>
-    /// <param name="state">Output parameter that will hold a reference to the state.</param>
+    /// <param name="stateRef">Output parameter that will hold a reference to the state.</param>
     /// <param name="name">The name of the state.</param>
     /// <param name="description">The description of the state.</param>
     /// <param name="configure">Optional builder action to configure the state.</param>
     /// <returns>The updated <see cref="WorkflowBuilder"/> instance.</returns>
     /// <exception cref="ArgumentException">Thrown when state name is null, empty, or a state with the same name (case-insensitive) already exists.</exception>
-    public WorkflowBuilder AddState(out StateReference state, string name, string description, Action<StateBuilder> configure)
+    public WorkflowBuilder AddState(out StateReference stateRef, string name, string description, Action<State> configure)
     {
         if (string.IsNullOrEmpty(name))
             throw new ArgumentException("State name cannot be null or empty", nameof(name));
 
         if (configure == null) throw new ArgumentNullException(nameof(configure));
 
-        if (_statesMap.ContainsKey(name))
+        if (this._statesMap.ContainsKey(name))
             throw new ArgumentException($"A state with the name '{name}' already exists", nameof(name));
 
-        var builder = new StateBuilder(name, description);
-        configure(builder);
+        var state = new State(name, description);
+        configure(state);
+        this._statesMap.Add(name, state);
 
-        var newState = builder.BuildJson();
-        _statesMap.Add(name, newState);
+        stateRef = new StateReference(name);
+        return this;
+    }
 
-        state = new StateReference(name);
+    /// <summary>
+    /// Adds a state to the workflow.
+    /// </summary>
+    /// <param name="stateRef">Output parameter that will hold a reference to the state.</param>
+    /// <param name="state">The state to add.</param>
+    /// <exception cref="ArgumentException">Thrown when state is null, or a state with the same name (case-insensitive) already exists.</exception>
+    public WorkflowBuilder AddState(out StateReference stateRef, State state)
+    {
+        if (state == null) throw new ArgumentException(nameof(state));
+
+        if (this._statesMap.ContainsKey(state.Name))
+            throw new ArgumentException($"A state with the name '{state.Name}' already exists", nameof(state.Name));
+
+        this._statesMap.Add(state.Name, state);
+        stateRef = new StateReference(state.Name);
         return this;
     }
 
@@ -142,9 +159,9 @@ public sealed class WorkflowBuilder
     {
         if (string.IsNullOrEmpty(name))
             throw new ArgumentException("State name cannot be null or empty", nameof(name));
-        if (_statesMap.ContainsKey(name))
+        if (this._statesMap.ContainsKey(name))
             throw new ArgumentException($"A state with the name '{name}' already exists", nameof(name));
-        _statesMap.Add(name, new StateBuilder(name, description).MarkAsFinal().BuildJson());
+        this._statesMap.Add(name, new State(name, description).MarkAsFinal());
         state = new StateReference(name);
         return this;
     }
@@ -159,33 +176,44 @@ public sealed class WorkflowBuilder
         if (source == null) throw new ArgumentNullException(nameof(source));
         if (configure == null) throw new ArgumentNullException(nameof(configure));
 
-        if (!_transitionBuilders.TryGetValue(source.Name, out var builder))
+        if (!this._transitionBuilders.TryGetValue(source.Name, out var builder))
         {
             builder = new StateTransitionBuilder(source);
-            _transitionBuilders[source.Name] = builder;
+            this._transitionBuilders[source.Name] = builder;
         }
         configure(builder);
+        return this;
+    }
+
+    public WorkflowBuilder WithStartState(StateReference startState)
+    {
+        if (startState == null) throw new ArgumentNullException(nameof(startState));
+        this._startState = startState.Name;
         return this;
     }
 
     /// <summary>
     /// Builds the workflow definition.
     /// </summary>
-    /// <param name="startState">The state that the workflow should start in.</param>
     /// <returns>The completed workflow definition.</returns>
     /// <exception cref="ArgumentNullException">Thrown when startState is null.</exception>
     /// <exception cref="InvalidOperationException">Thrown when no states are defined or when there are no transitions between states.</exception>
-    public JsonObject BuildJson(StateReference startState)
+    public JsonObject BuildJson()
     {
-        if (startState == null) throw new ArgumentNullException(nameof(startState));
+        if (this._startState == null)
+        {
+            throw new InvalidOperationException("Start state must be defined before building the workflow.");
+        }
 
-        if (_statesMap.Count == 0)
+        if (this._statesMap.Count == 0)
+        {
             throw new InvalidOperationException("At least one state must be defined.");
+        }
 
         var transitions = new JsonArray();
-        foreach (var builder in _transitionBuilders.Values)
+        foreach (var builder in this._transitionBuilders.Values)
         {
-            var transitionsForState = builder.BuildJson();
+            var transitionsForState = builder.ToJson();
             if (transitionsForState.Count > 0)
             {
                 foreach (var transition in transitionsForState)
@@ -202,30 +230,29 @@ public sealed class WorkflowBuilder
             throw new InvalidOperationException("At least one transition must be defined.");
 
         var variables = new JsonArray();
-        foreach (var variable in _variablesMap.Values)
+        foreach (var variable in this._variablesMap.Values)
         {
             variables.Add(variable);
         }
 
-        var _startState = startState.Name;
         var states = new JsonArray();
-        foreach (var state in _statesMap.Values)
+        foreach (var state in this._statesMap.Values)
         {
-            states.Add(state.DeepClone());
+            states.Add(state.ToJson());
         }
 
         var workflow = new JsonObject
         {
-            ["name"] = _name,
+            ["name"] = this._name,
             ["variables"] = variables,
             ["states"] = states,
-            ["startState"] = _startState,
+            ["startState"] = this._startState,
             ["transitions"] = transitions
         };
 
         if (this._description != null)
         {
-            workflow["description"] = _description;
+            workflow["description"] = this._description;
         }
 
         return workflow;
