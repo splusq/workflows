@@ -11,7 +11,7 @@
                 .AddState(out var studentState, name: "student", description: "The student state", stateBuilder =>
                     stateBuilder.AddAgentActor(actorBuilder =>
                         actorBuilder
-                            .SetAgentName(studentAgentName)
+                            .SetAgent(studentAgentId, studentAgentName)
                             .WithThread(studentThread)
                             .WithInputMessages(teacherMessages)
                             .WithMaxTurns(5)
@@ -21,7 +21,7 @@
                 .AddState(out var teacherState, name: "teacher", description: "The teacher state", stateBuilder =>
                     stateBuilder.AddAgentActor(actorBuilder =>
                         actorBuilder
-                            .SetAgentName(teacherAgentName)
+                            .SetAgent(teacherAgentId, teacherAgentName)
                             .WithThread(teacherThread)
                             .WithInputMessages(studentMessages)
                             .WithMaxTurns(5)

@@ -192,7 +192,7 @@ public static class Ext
         {
             using var stream = new MemoryStream();
             writeToStream(content, stream);
-            return StreamContainsWorkflowPattern(stream, @"""assistant_id"":""wf_", @"""workflow_version");
+            return StreamContainsWorkflowPattern(stream, @"""assistant_id"":""wf_", @"""workflow_version", @"""startState"":");
         }
         catch
         {
