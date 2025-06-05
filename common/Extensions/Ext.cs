@@ -1,6 +1,5 @@
 using Azure.Core;
 using Azure.Core.Pipeline;
-using Microsoft.SemanticKernel;
 using System;
 using System.ClientModel.Primitives;
 using System.Collections;
@@ -8,6 +7,8 @@ using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+
+public record Workflow(string Id);
 
 public static class Ext
 {
@@ -47,63 +48,6 @@ public static class Ext
         message.Request.Method = RequestMethod.Post;
         message.Request.Uri.Reset(new Uri("https://localhost/agents" + (id != null ? $"/{id}" : string.Empty)));
         message.Request.Content = RequestContent.Create(new MemoryStream(Encoding.UTF8.GetBytes(workflowDefinition.BuildJson().ToString())));
-        message.Request.Headers.Add("Content-Type", "application/json");
-
-        await pipeline.SendAsync(message, default).ConfigureAwait(false);
-
-        if (message.Response?.Status < 200 || message.Response?.Status >= 300)
-        {
-            var errorContent = await message.Response.Content.AsJsonAsync().ConfigureAwait(false);
-
-            throw new Exception($"Error publishing workflow: {errorContent}");
-        }
-
-        var responseJson = await message.Response!.Content.AsJsonAsync().ConfigureAwait(false) ?? string.Empty;
-
-        using var doc = JsonDocument.Parse(responseJson);
-        var workflowId = doc.RootElement.GetProperty("id").GetString() ?? string.Empty;
-
-        Console.WriteLine($"Creating workflow {workflowId}...");
-
-        return new Workflow(workflowId);
-    }
-
-    public static async Task<Workflow> PublishWorkflowAsync<T>(this ClientPipeline pipeline, FoundryProcessBuilder<T> process) where T : class, new()
-    {
-        // Send the request
-        using var message = pipeline.CreateMessage();
-        var payload = await process.ToJsonAsync();
-        message.Request.Method = "POST";
-        message.Request.Uri = new Uri("https://localhost/agents");
-        message.Request.Content = System.ClientModel.BinaryContent.Create(new MemoryStream(Encoding.UTF8.GetBytes(payload)));
-        message.Request.Headers.Add("Content-Type", "application/json");
-
-        await pipeline.SendAsync(message).ConfigureAwait(false);
-
-        if (message.Response?.Status < 200 || message.Response?.Status >= 300)
-        {
-            var errorContent = await message.Response.Content.AsJsonAsync().ConfigureAwait(false);
-
-            throw new Exception($"Error publishing workflow: {errorContent}");
-        }
-
-        var responseJson = await message.Response!.Content.AsJsonAsync().ConfigureAwait(false) ?? string.Empty;
-
-        using var doc = JsonDocument.Parse(responseJson);
-        var workflowId = doc.RootElement.GetProperty("id").GetString() ?? string.Empty;
-
-        Console.WriteLine($"Creating workflow {workflowId}...");
-
-        return new Workflow(workflowId);
-    }
-
-    public static async Task<Workflow> PublishWorkflowAsync<T>(this HttpPipeline pipeline, FoundryProcessBuilder<T> process) where T : class, new()
-    {
-        // Send the request
-        using var message = pipeline.CreateMessage();
-        message.Request.Method = RequestMethod.Post;
-        message.Request.Uri.Reset(new Uri("https://localhost/agents"));
-        message.Request.Content = RequestContent.Create(new MemoryStream(Encoding.UTF8.GetBytes(await process.ToJsonAsync())));
         message.Request.Headers.Add("Content-Type", "application/json");
 
         await pipeline.SendAsync(message, default).ConfigureAwait(false);
@@ -207,7 +151,7 @@ public static class Ext
 
     public static async Task<string> AsJsonAsync(this BinaryData data)
     {
-        if (data == null || data.Length == 0)
+        if (data == null)
         {
             return string.Empty;
         }
