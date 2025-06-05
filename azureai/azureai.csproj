@@ -13,6 +13,6 @@
     <PackageReference Include="Azure.Identity" Version="1.13.2" />
     <PackageReference Include="Microsoft.SemanticKernel.Process.Core" Version="1.53.0-alpha" />
     <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
-    <ProjectReference Include="../common/common.csproj" />
+    <ProjectReference Include="../sdk/sdk.csproj" />
   </ItemGroup>
 </Project>
