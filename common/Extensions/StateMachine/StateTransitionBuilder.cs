@@ -101,7 +101,11 @@ public sealed class StateTransitionBuilder
         return this;
     }
 
-    internal JsonArray BuildJson()
+    /// <summary>
+    /// Builds the transitions for the source state as a JSON array.
+    /// </summary>
+    /// <returns>The transitions for the source state.</returns>
+    internal JsonArray ToJson()
     {
         return this._transitionsForState;
     }

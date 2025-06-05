@@ -2,20 +2,20 @@ using System.Text.Json.Nodes;
 
 
 /// <summary>
-/// Builder for defining workflow states.
+/// A workflow state.
 /// </summary>
-public sealed class StateBuilder
+public sealed class State
 {
     private readonly string? _description;
-    private readonly List<JsonObject> _actors = new List<JsonObject>();
+    private readonly List<AgentActor> _actors = new List<AgentActor>();
     private bool _isFinal;
 
     /// <summary>
-    /// Creates a new instance of the <see cref="StateBuilder"/> class.
+    /// Creates a new instance of the <see cref="State"/> class.
     /// </summary>
     /// <param name="name">The name of the state.</param>
     /// <param name="description">The description of the state.</param>
-    public StateBuilder(string name, string? description = null)
+    public State(string name, string? description = null)
     {
         if (string.IsNullOrEmpty(name))
         {
@@ -32,14 +32,25 @@ public sealed class StateBuilder
     /// Adds an agent actor to the state.
     /// </summary>
     /// <param name="configure">The builder action to configure the actor.</param>
-    /// <returns>The updated <see cref="StateBuilder"/> instance.</returns>
-    public StateBuilder AddAgentActor(Action<AgentActorBuilder> configure)
+    /// <returns>The updated <see cref="State"/> instance.</returns>
+    public State AddAgentActor(Action<AgentActor> configure)
     {
         if (configure == null) throw new ArgumentNullException(nameof(configure));
 
-        var builder = new AgentActorBuilder(Guid.NewGuid().ToString("N"));
-        configure(builder);
-        var actor = builder.BuildJson();
+        var actor = new AgentActor();
+        configure(actor);
+        this._actors.Add(actor);
+        return this;
+    }
+
+    /// <summary>
+    /// Adds an agent actor to the state.
+    /// </summary>
+    /// <param name="configure">The builder action to configure the actor.</param>
+    /// <returns>The updated <see cref="State"/> instance.</returns>
+    public State AddAgentActor(AgentActor actor)
+    {
+        if (actor == null) throw new ArgumentNullException(nameof(actor));
         this._actors.Add(actor);
         return this;
     }
@@ -47,18 +58,18 @@ public sealed class StateBuilder
     /// <summary>
     /// Marks the state as a final state.
     /// </summary>
-    /// <returns>The updated <see cref="StateBuilder"/> instance.</returns>
-    public StateBuilder MarkAsFinal()
+    /// <returns>The updated <see cref="State"/> instance.</returns>
+    public State MarkAsFinal()
     {
         this._isFinal = true;
         return this;
     }
 
     /// <summary>
-    /// Builds the state.
+    /// Builds the state as json.
     /// </summary>
-    /// <returns>The completed state.</returns>
-    internal JsonObject BuildJson()
+    /// <returns>The state.</returns>
+    internal JsonObject ToJson()
     {
         if (this._actors.Count == 0 && !this._isFinal)
         {
@@ -85,7 +96,7 @@ public sealed class StateBuilder
             var actors = new JsonArray();
             foreach (var actor in this._actors)
             {
-                actors.Add(actor);
+                actors.Add(actor.ToJson());
             }
             state["actors"] = actors;
         }
