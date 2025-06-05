@@ -37,7 +37,7 @@
                             .ByDefaultTransitionTo(to: teacherState))
                     .ForState(teacherState, stateTransitionBuilder =>
                         stateTransitionBuilder
-                            .OnConditionTransitionTo(condition: SimpleCondition.Contains(variable: teacherMessages, value: "[COMPLETE]"), studentState)
+                            .OnConditionTransitionTo(condition: SimpleCondition.Contains(variable: teacherMessages, value: "[COMPLETE]"), finalState)
                             .ByDefaultTransitionTo(to: studentState));
         }
     }
