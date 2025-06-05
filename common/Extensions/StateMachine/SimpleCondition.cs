@@ -17,7 +17,7 @@ public record SimpleCondition
     {
         ArgumentNullException.ThrowIfNull(variable);
         ArgumentException.ThrowIfNullOrEmpty(value);
-        return new SimpleCondition($"{variable.Name}.Equals({value})");
+        return new SimpleCondition($"{variable.Name}.Equals('{value}')");
     }
 
     /// <summary>
@@ -99,7 +99,7 @@ public record SimpleCondition
     {
         ArgumentNullException.ThrowIfNull(variable);
         ArgumentException.ThrowIfNullOrEmpty(value);
-        return new SimpleCondition($"{variable.Name}.Contains({value})");
+        return new SimpleCondition($"{variable.Name}.Contains('{value}')");
     }
 
     /// <summary>
@@ -112,6 +112,6 @@ public record SimpleCondition
     {
         ArgumentNullException.ThrowIfNull(variable);
         ArgumentException.ThrowIfNullOrEmpty(value);
-        return new SimpleCondition($"{variable.Name}.NotContains({value})");
+        return new SimpleCondition($"{variable.Name}.NotContains('{value}')");
     }
 }
