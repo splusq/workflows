@@ -39,7 +39,7 @@ rootCommand.SetHandler(async (string endpoint, string audience, string apiVersio
     try
     {
         // publish the workflow
-        var definition = Workflows.Build(studentAgent.Value.Id, studentAgent.Value.Name, teacherAgent.Value.Id, teacherAgent.Value.Name);
+        var definition = Workflows.Build(studentAgent.Value, teacherAgent.Value);
         workflow = await client.Pipeline.PublishWorkflowAsync(definition);
 
         // threadId is used to store the thread ID

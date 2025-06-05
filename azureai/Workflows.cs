@@ -1,6 +1,8 @@
-﻿public static class Workflows
+﻿using Azure.AI.Agents.Persistent;
+
+public static class Workflows
 {
-    public static WorkflowBuilder Build(string studentAgentId, string studentAgentName, string teacherAgentId, string teacherAgentName)
+    public static WorkflowBuilder Build(PersistentAgent studentAgent, PersistentAgent teacherAgent)
     {
         return
             new WorkflowBuilder(name: "two_agent_math_chat", description: "2 way chat between student and teacher")
@@ -11,7 +13,7 @@
                 .AddState(out var studentState, name: "student", description: "The student state", stateBuilder =>
                     stateBuilder.AddAgentActor(actorBuilder =>
                         actorBuilder
-                            .SetAgent(studentAgentId, studentAgentName)
+                            .SetAgent(studentAgent.Id, studentAgent.Name)
                             .WithThread(studentThread)
                             .WithInputMessages(teacherMessages)
                             .WithMaxTurns(5)
@@ -21,7 +23,7 @@
                 .AddState(out var teacherState, name: "teacher", description: "The teacher state", stateBuilder =>
                     stateBuilder.AddAgentActor(actorBuilder =>
                         actorBuilder
-                            .SetAgent(teacherAgentId, teacherAgentName)
+                            .SetAgent(teacherAgent.Id, teacherAgent.Name)
                             .WithThread(teacherThread)
                             .WithInputMessages(studentMessages)
                             .WithMaxTurns(5)
