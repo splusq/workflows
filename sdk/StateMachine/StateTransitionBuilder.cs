@@ -1,18 +1,16 @@
-using System.Text.Json.Nodes;
-
 /// <summary>
 /// Builder for defining transitions from a specific source state.
 /// </summary>
 public sealed class StateTransitionBuilder
 {
     private readonly StateReference _source;
-    private readonly JsonArray _transitionsForState = new JsonArray();
+    private readonly List<Transition> _transitionsForState = new List<Transition>();
 
     /// <summary>
     /// Creates a new instance of the <see cref="StateTransitionBuilder"/> class.
     /// </summary>
     /// <param name="source">The source state reference.</param>
-    internal StateTransitionBuilder(StateReference source)
+    public StateTransitionBuilder(StateReference source)
     {
         this._source = source ?? throw new ArgumentNullException(nameof(source));
     }
@@ -28,11 +26,11 @@ public sealed class StateTransitionBuilder
         if (string.IsNullOrEmpty(eventName)) throw new ArgumentException("Event name cannot be null or empty", nameof(eventName));
         if (to == null) throw new ArgumentNullException(nameof(to));
 
-        this._transitionsForState.Add(new JsonObject
+        this._transitionsForState.Add(new Transition
         {
-            ["from"] = this._source.Name,
-            ["to"] = to.Name,
-            ["event"] = eventName
+            From = this._source.Name,
+            To = to.Name,
+            Event = eventName
         });
 
         return this;
@@ -71,13 +69,22 @@ public sealed class StateTransitionBuilder
     {
         if (to == null) throw new ArgumentNullException(nameof(to));
 
-        this._transitionsForState.Add(new JsonObject
+        this._transitionsForState.Add(new Transition
         {
-            ["from"] = this._source.Name,
-            ["to"] = to.Name
+            From = this._source.Name,
+            To = to.Name
         });
 
         return this;
+    }
+
+    /// <summary>
+    /// Builds the transitions for the source state
+    /// </summary>
+    /// <returns>The transitions for the source state.</returns>
+    public List<Transition> Build()
+    {
+        return this._transitionsForState;
     }
 
     /// <summary>
@@ -91,22 +98,13 @@ public sealed class StateTransitionBuilder
         if (string.IsNullOrEmpty(condition)) throw new ArgumentException("Condition expression cannot be null or empty", nameof(condition));
         if (to == null) throw new ArgumentNullException(nameof(to));
 
-        this._transitionsForState.Add(new JsonObject
+        this._transitionsForState.Add(new Transition
         {
-            ["from"] = this._source.Name,
-            ["to"] = to.Name,
-            ["condition"] = condition
+            From = this._source.Name,
+            To = to.Name,
+            Condition = condition
         });
 
         return this;
-    }
-
-    /// <summary>
-    /// Builds the transitions for the source state as a JSON array.
-    /// </summary>
-    /// <returns>The transitions for the source state.</returns>
-    internal JsonArray ToJson()
-    {
-        return this._transitionsForState;
     }
 }

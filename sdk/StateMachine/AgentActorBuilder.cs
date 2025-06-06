@@ -1,47 +1,29 @@
-using System.Text.Json.Nodes;
-
-public enum HumanInLoopMode
-{
-    /// <summary>
-    /// Waits for a human to provide input on the chat if no new messages are available for the agent to operate on.
-    /// </summary>
-    OnNoMessage = 0,
-
-    /// <summary>
-    /// Never waits for human input, the agent will continue processing without human intervention.
-    /// </summary>
-    Never,
-
-    /// <summary>
-    /// Always waits for human input before proceeding with the next action.
-    /// </summary>
-    Always
-}
-
 /// <summary>
 /// An agent actor in a workflow state.
 /// </summary>
-public sealed class AgentActor
+public sealed class AgentActorBuilder
 {
     private readonly string _id;
     private readonly List<string> _messagesIn = new List<string>();
     private readonly Dictionary<string, string> _inputs = new Dictionary<string, string>();
     private readonly AgentActorOnEnterActionsBuilder _agentActorOnEnterActionsBuilder = new AgentActorOnEnterActionsBuilder();
     private readonly AgentActorOnCompleteActionsBuilder _agentActorOnCompleteActionsBuilder = new AgentActorOnCompleteActionsBuilder();
-
+    
     private string? _agent;
     private string? _agentId;
     private string? _thread;
     private HumanInLoopMode _humanInLoopMode = HumanInLoopMode.OnNoMessage;
     private bool _streamOutput = true;
     private int? _maxTurn;
+    private int? _maxTransientErrorRetries;
+    private int? _maxRateLimitRetries;
 
     /// <summary>
-    /// Creates a new instance of the <see cref="AgentActor"/> class.
+    /// Creates a new instance of the <see cref="AgentActorBuilder"/> class.
     /// </summary>
-    public AgentActor()
+    public AgentActorBuilder()
     {
-        _id = Guid.NewGuid().ToString("N");
+        this._id = Guid.NewGuid().ToString("N");
     }
 
     /// <summary>
@@ -49,8 +31,8 @@ public sealed class AgentActor
     /// </summary>
     /// <param name="agentId">The ID of the agent.</param>
     /// <param name="agentName">The name of the agent.</param>
-    /// <returns>The updated <see cref="AgentActor"/> instance.</returns>
-    public AgentActor SetAgent(string agentId, string? agentName = null)
+    /// <returns>The updated <see cref="AgentActorBuilder"/> instance.</returns>
+    public AgentActorBuilder SetAgent(string agentId, string? agentName = null)
     {
         if (string.IsNullOrEmpty(agentId))
         {
@@ -67,7 +49,7 @@ public sealed class AgentActor
     /// </summary>
     /// <param name="agentName">The name of the agent.</param>
     /// <returns>The updated <see cref="AgentActor"/> instance.</returns>
-    public AgentActor SetAgentName(string agentName)
+    public AgentActorBuilder SetAgentName(string agentName)
     {
         if (string.IsNullOrEmpty(agentName))
         {
@@ -84,7 +66,7 @@ public sealed class AgentActor
     /// <param name="dynamicAgentId">The ID of the agent dynamically resolved at run-time from the value stored in the variable.</param>
     /// <param name="dynamicAgentName">The name of the agent dynamically resolved at run-time from the value stored in the variable.</param>
     /// <returns>The updated <see cref="AgentActor"/> instance.</returns>
-    public AgentActor SetAgent(UserDefinedVariableReference dynamicAgentId, UserDefinedVariableReference? dynamicAgentName = null)
+    public AgentActorBuilder SetAgent(UserDefinedVariableReference dynamicAgentId, UserDefinedVariableReference? dynamicAgentName = null)
     {
         if (dynamicAgentId == null)
         {
@@ -96,7 +78,7 @@ public sealed class AgentActor
         return this;
     }
 
-    public AgentActor SetAgentName(UserDefinedVariableReference dynamicAgentName)
+    public AgentActorBuilder SetAgentName(UserDefinedVariableReference dynamicAgentName)
     {
         if (dynamicAgentName == null)
         {
@@ -112,7 +94,7 @@ public sealed class AgentActor
     /// </summary>
     /// <param name="thread">The thread variable reference.</param>
     /// <returns>The updated <see cref="AgentActor"/> instance.</returns>
-    public AgentActor WithThread(ThreadVariableReference thread)
+    public AgentActorBuilder WithThread(ThreadVariableReference thread)
     {
         this._thread = thread?.Name ?? throw new ArgumentNullException(nameof(thread));
         return this;
@@ -123,7 +105,7 @@ public sealed class AgentActor
     /// </summary>
     /// <param name="messages">The messages variable reference.</param>
     /// <returns>The updated <see cref="AgentActor"/> instance.</returns>
-    public AgentActor WithInputMessages(params MessagesVariableReference[] messages)
+    public AgentActorBuilder WithInputMessages(params MessagesVariableReference[] messages)
     {
         if (messages == null || messages.Length == 0) throw new ArgumentNullException(nameof(messages));
         foreach (var message in messages)
@@ -139,7 +121,7 @@ public sealed class AgentActor
     /// <param name="inputName">The name of the input in the actor.</param>
     /// <param name="variable">The variable reference to map to this input.</param>
     /// <returns>The updated <see cref="AgentActor"/> instance.</returns>
-    public AgentActor WithInput(string inputName, UserDefinedVariableReference variable)
+    public AgentActorBuilder WithInput(string inputName, UserDefinedVariableReference variable)
     {
         if (string.IsNullOrEmpty(inputName)) throw new ArgumentException("Input name cannot be null or empty", nameof(inputName));
         if (variable == null) throw new ArgumentNullException(nameof(variable));
@@ -153,7 +135,7 @@ public sealed class AgentActor
     /// </summary>
     /// <param name="configure">The builder action to configure the actions.</param>
     /// <returns>The updated <see cref="AgentActor"/> instance.</returns>
-    public AgentActor OnEnter(Action<AgentActorOnEnterActionsBuilder> configure)
+    public AgentActorBuilder OnEnter(Action<AgentActorOnEnterActionsBuilder> configure)
     {
         if (configure == null) throw new ArgumentNullException(nameof(configure));
         configure(this._agentActorOnEnterActionsBuilder);
@@ -165,7 +147,7 @@ public sealed class AgentActor
     /// </summary>
     /// <param name="configure">The builder action to configure the actions.</param>
     /// <returns>The updated <see cref="AgentActor"/> instance.</returns>
-    public AgentActor OnComplete(Action<AgentActorOnCompleteActionsBuilder> configure)
+    public AgentActorBuilder OnComplete(Action<AgentActorOnCompleteActionsBuilder> configure)
     {
         if (configure == null) throw new ArgumentNullException(nameof(configure));
         configure(this._agentActorOnCompleteActionsBuilder);
@@ -177,7 +159,7 @@ public sealed class AgentActor
     /// </summary>
     /// <param name="mode">The human-in-loop mode.</param>
     /// <returns>The updated <see cref="AgentActor"/> instance.</returns>
-    public AgentActor WithHumanInLoop(HumanInLoopMode mode)
+    public AgentActorBuilder WithHumanInLoop(HumanInLoopMode mode)
     {
         this._humanInLoopMode = mode;
         return this;
@@ -187,7 +169,7 @@ public sealed class AgentActor
     /// Disables output message streaming. Use this to prevent the agent from streaming output messages to the thread/chat.
     /// </summary>
     /// <returns>The updated <see cref="AgentActor"/> instance.</returns>
-    public AgentActor DisableOutputMessageStreaming()
+    public AgentActorBuilder DisableOutputMessageStreaming()
     {
         this._streamOutput = false;
         return this;
@@ -198,7 +180,7 @@ public sealed class AgentActor
     /// </summary>
     /// <param name="maxTurn">The maximum number of turns.</param>
     /// <returns>The updated <see cref="AgentActor"/> instance.</returns>
-    public AgentActor WithMaxTurns(uint maxTurn)
+    public AgentActorBuilder WithMaxTurns(uint maxTurn)
     {
         if (maxTurn <= 0 || maxTurn > 10)
         {
@@ -209,67 +191,47 @@ public sealed class AgentActor
     }
 
     /// <summary>
-    /// Builds the agent actor.
+    /// Configures the builder to retry operations in the event of transient errors or rate limits.
     /// </summary>
-    /// <returns>The completed agent actor.</returns>
-    internal JsonObject ToJson()
+    /// <param name="maxTransientErrorRetries">The maximum number of retries to attempt for transient errors.</param>
+    /// <param name="maxRateLimitRetries">The maximum number of retries to attempt when rate limits are encountered.</param>
+    /// <returns>The current <see cref="AgentActorBuilder"/> instance with the retry configuration applied.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown if <paramref name="maxTransientErrorRetries"/> or <paramref name="maxRateLimitRetries"/> is less than 0.</exception>
+    public AgentActorBuilder WithRetries(int? maxTransientErrorRetries, int? maxRateLimitRetries)
     {
-        if (string.IsNullOrEmpty(this._agent) && string.IsNullOrEmpty(this._agentId))
+        if (maxTransientErrorRetries != null && maxTransientErrorRetries < 0)
         {
-            throw new InvalidOperationException("Agent or AgentId must be set for an actor.");
+            throw new ArgumentOutOfRangeException(nameof(maxTransientErrorRetries), "Must be greater than or equal to zero.");
+        }
+        if (maxRateLimitRetries != null && maxRateLimitRetries < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(maxRateLimitRetries), "Must be greater than or equal to zero.");
         }
 
-        var agentActor  = new JsonObject
+        this._maxTransientErrorRetries = maxTransientErrorRetries;
+        this._maxRateLimitRetries = maxRateLimitRetries;
+        return this;
+    }
+
+    public AgentActor Build()
+    {
+        var agentActor = new AgentActor
         {
-            ["id"] = this._id,
-            ["humanInLoopMode"] = this._humanInLoopMode.ToString(),
-            ["streamOutput"] = this._streamOutput
+            Id = this._id,
+            Agent = this._agent,
+            AgentId = this._agentId,
+            Thread = this._thread,
+            HumanInLoopMode = this._humanInLoopMode,
+            StreamOutput = this._streamOutput,
+            MaxTurn = this._maxTurn,
+            MaxRateLimitRetries = this._maxRateLimitRetries,
+            MaxTransientErrorRetries = this._maxTransientErrorRetries,
+            MessagesIn = this._messagesIn.Any() ? this._messagesIn : null,
+            Inputs = this._inputs.Any() ? this._inputs : null,
         };
 
-        if (this._agent != null)
-        {
-            agentActor["agent"] = this._agent;
-        }
-
-        if (this._agentId != null)
-        {
-            agentActor["agentId"] = this._agentId;
-        }
-
-        if (this._thread != null)
-        {
-            agentActor["thread"] = this._thread;
-        }
-
-        if (this._maxTurn != null)
-        {
-            agentActor["maxTurn"] = this._maxTurn.Value;
-        }
-
-        if (this._messagesIn.Count > 0)
-        {
-            var messagesIn = new JsonArray();
-            foreach (var message in _messagesIn)
-            {
-                messagesIn.Add(message);
-            }
-
-            agentActor["messagesIn"] = messagesIn;
-        }
-
-        if (this._inputs.Count > 0)
-        {
-            var inputs = new JsonObject();
-            foreach (var input in this._inputs)
-            {
-                inputs[input.Key] = input.Value;
-            }
-            agentActor["inputs"] = inputs;
-        }
-
-        this._agentActorOnEnterActionsBuilder.BuildJsontWith(agentActor);
-        this._agentActorOnCompleteActionsBuilder.BuildJsonWith(agentActor);
-
+        agentActor = this._agentActorOnEnterActionsBuilder.Build(agentActor);
+        agentActor = this._agentActorOnCompleteActionsBuilder.Build(agentActor);
         return agentActor;
     }
 }

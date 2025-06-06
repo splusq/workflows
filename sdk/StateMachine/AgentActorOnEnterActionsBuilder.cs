@@ -1,11 +1,9 @@
-using System.Text.Json.Nodes;
-
 /// <summary>
 /// Builder for defining actions that are executed when entering an agent actor.
 /// </summary>
 public sealed class AgentActorOnEnterActionsBuilder
 {
-    private string _threadResetMode = "Never";
+    private ThreadResetMode _threadResetMode = ThreadResetMode.Never;
 
     /// <summary>
     /// Adds an action to reset the thread.
@@ -13,7 +11,7 @@ public sealed class AgentActorOnEnterActionsBuilder
     /// <returns>The updated <see cref="AgentActorOnEnterActionsBuilder"/> instance.</returns>
     public AgentActorOnEnterActionsBuilder ResetThread()
     {
-        this._threadResetMode = "OnEnter";
+        this._threadResetMode = ThreadResetMode.OnEnter;
         return this;
     }
 
@@ -21,9 +19,11 @@ public sealed class AgentActorOnEnterActionsBuilder
     /// Builds the agent actor.
     /// </summary>
     /// <returns>The agent actor.</returns>
-    internal JsonObject BuildJsontWith(JsonObject actor)
+    public AgentActor Build(AgentActor actor)
     {
-        actor["threadResetMode"] = this._threadResetMode;
-        return actor;
+        return actor with
+        {
+            ThreadResetMode = this._threadResetMode
+        };
     }
 }

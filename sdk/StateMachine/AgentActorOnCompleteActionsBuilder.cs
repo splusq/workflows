@@ -1,5 +1,3 @@
-using System.Text.Json.Nodes;
-
 public enum AgentActorMessageSource
 {
     OutputMessages = 0,
@@ -91,45 +89,17 @@ public sealed class AgentActorOnCompleteActionsBuilder
     }
 
     /// <summary>
-    /// Builds the actor.
+    /// Builds the agent actor.
     /// </summary>
-    /// <returns>The actor.</returns>
-    internal JsonObject BuildJsonWith(JsonObject actor)
+    /// <returns>The agent actor.</returns>
+    public AgentActor Build(AgentActor actor)
     {
-        if (actor == null) throw new ArgumentNullException(nameof(actor));
-        
-        if (this._messagesOut != null)
+        return actor with
         {
-            actor["messagesOut"] = this._messagesOut;
-        }
-
-        if (this._userMessages != null)
-        {
-            actor["userMessages"] = this._userMessages;
-        }
-
-        if (this._outputs.Any())
-        {
-            var outputs = new JsonObject();
-            foreach (var output in this._outputs)
-            {
-                outputs[output.Key] = output.Value;
-            }
-
-            actor["outputs"] = outputs;
-        }
-
-        if (this._events.Any())
-        {
-            var events = new JsonObject();
-            foreach (var eventPair in this._events)
-            {
-                events[eventPair.Key] = eventPair.Value;
-            }
-            actor["events"] = events;
-        }
-
-        return actor;
-
+            MessagesOut = this._messagesOut,
+            UserMessages = this._userMessages,
+            Outputs = this._outputs.Any() ? this._outputs : null,
+            Events = this._events.Any() ? this._events : null
+        };
     }
 }
