@@ -1,25 +1,154 @@
 using Azure.Core;
 using Azure.Core.Pipeline;
-using System;
+using sdk.Agent;
 using System.ClientModel.Primitives;
 using System.Collections;
-using System.Diagnostics;
 using System.Text;
-using System.Text.Json;
 using System.Text.RegularExpressions;
-
-public record Workflow(string Id);
 
 public static class Ext
 {
-    public static async Task<Workflow> PublishWorkflowAsync(this ClientPipeline pipeline, WorkflowBuilder workflowDefinition, string? id = null)
+    public static async Task<AgentExtensions> UpdateAgentExtensionsAsync(this ClientPipeline pipeline, string agentId, AgentExtensionsDefinition extensions)
     {
         // Send the request
         using var message = pipeline.CreateMessage();
-        var payload = workflowDefinition.BuildJson().ToString();
+        message.Request.Method = "POST";
+        message.Request.Uri = new Uri($"https://localhost/assistants/{agentId}/extensions");
+        message.Request.Content = System.ClientModel.BinaryContent.Create(new MemoryStream(Encoding.UTF8.GetBytes(extensions.ToJson())));
+        message.Request.Headers.Add("Content-Type", "application/json");
+        await pipeline.SendAsync(message).ConfigureAwait(false);
+        if (message.Response?.Status < 200 || message.Response?.Status >= 300)
+        {
+            var errorContent = await message.Response.Content.AsJsonAsync().ConfigureAwait(false);
+            throw new Exception($"Error updating agent extensions: {errorContent}");
+        }
+        var responseJson = await message.Response!.Content.AsJsonAsync().ConfigureAwait(false) ?? string.Empty;
+        return AgentExtensions.FromJson(responseJson);
+    }
+
+    public static async Task<AgentExtensions> GetAgentExtensionsAsync(this ClientPipeline pipeline, string agentId)
+    {
+        // Send the request
+        using var message = pipeline.CreateMessage();
+        message.Request.Method = "GET";
+        message.Request.Uri = new Uri($"https://localhost/assistants/{agentId}/extensions");
+        await pipeline.SendAsync(message).ConfigureAwait(false);
+        if (message.Response?.Status < 200 || message.Response?.Status >= 300)
+        {
+            var errorContent = await message.Response.Content.AsJsonAsync().ConfigureAwait(false);
+            throw new Exception($"Error getting agent extensions: {errorContent}");
+        }
+        var responseJson = await message.Response!.Content.AsJsonAsync().ConfigureAwait(false) ?? string.Empty;
+        return AgentExtensions.FromJson(responseJson);
+    }
+
+    public static async Task<RunOutputs> GetAgentOutputsAsync(this ClientPipeline pipeline, string threadId, string runId)
+    {
+        // Send the request
+        using var message = pipeline.CreateMessage();
+        message.Request.Method = "GET";
+        message.Request.Uri = new Uri($"https://localhost/threads/{threadId}/runs/{runId}/outputs");
+        await pipeline.SendAsync(message).ConfigureAwait(false);
+        if (message.Response?.Status < 200 || message.Response?.Status >= 300)
+        {
+            var errorContent = await message.Response.Content.AsJsonAsync().ConfigureAwait(false);
+            throw new Exception($"Error getting run outputs: {errorContent}");
+        }
+        var responseJson = await message.Response!.Content.AsJsonAsync().ConfigureAwait(false) ?? string.Empty;
+        return RunOutputs.FromJson(responseJson);
+    }
+
+    public static async Task<RunEvents> GetAgentEventsAsync(this ClientPipeline pipeline, string threadId, string runId)
+    {
+        // Send the request
+        using var message = pipeline.CreateMessage();
+        message.Request.Method = "GET";
+        message.Request.Uri = new Uri($"https://localhost/threads/{threadId}/runs/{runId}/events");
+        await pipeline.SendAsync(message).ConfigureAwait(false);
+        if (message.Response?.Status < 200 || message.Response?.Status >= 300)
+        {
+            var errorContent = await message.Response.Content.AsJsonAsync().ConfigureAwait(false);
+            throw new Exception($"Error getting run events: {errorContent}");
+        }
+        var responseJson = await message.Response!.Content.AsJsonAsync().ConfigureAwait(false) ?? string.Empty;
+        return RunEvents.FromJson(responseJson);
+    }
+
+    public static async Task<AgentExtensions> UpdateAgentExtensionsAsync(this HttpPipeline pipeline, string agentId, AgentExtensionsDefinition extensions)
+    {
+        // Send the request
+        using var message = pipeline.CreateMessage();
+        message.Request.Method = RequestMethod.Post;
+        message.Request.Uri.Reset(new Uri($"https://localhost/assistants/{agentId}/extensions"));
+        message.Request.Content = RequestContent.Create(new MemoryStream(Encoding.UTF8.GetBytes(extensions.ToJson())));
+        message.Request.Headers.Add("Content-Type", "application/json");
+
+
+        await pipeline.SendAsync(message, default).ConfigureAwait(false);
+        if (message.Response?.Status < 200 || message.Response?.Status >= 300)
+        {
+            var errorContent = await message.Response.Content.AsJsonAsync().ConfigureAwait(false);
+            throw new Exception($"Error updating agent extensions: {errorContent}");
+        }
+        var responseJson = await message.Response!.Content.AsJsonAsync().ConfigureAwait(false) ?? string.Empty;
+        return AgentExtensions.FromJson(responseJson);
+    }
+
+    public static async Task<AgentExtensions> GetAgentExtensionsAsync(this HttpPipeline pipeline, string agentId)
+    {
+        // Send the request
+        using var message = pipeline.CreateMessage();
+        message.Request.Method = RequestMethod.Get;
+        message.Request.Uri.Reset(new Uri($"https://localhost/assistants/{agentId}/extensions"));
+        await pipeline.SendAsync(message, default).ConfigureAwait(false);
+        if (message.Response?.Status < 200 || message.Response?.Status >= 300)
+        {
+            var errorContent = await message.Response.Content.AsJsonAsync().ConfigureAwait(false);
+            throw new Exception($"Error getting agent extensions: {errorContent}");
+        }
+        var responseJson = await message.Response!.Content.AsJsonAsync().ConfigureAwait(false) ?? string.Empty;
+        return AgentExtensions.FromJson(responseJson);
+    }
+
+    public static async Task<RunOutputs> GetAgentOutputsAsync(this HttpPipeline pipeline, string threadId, string runId)
+    {
+        // Send the request
+        using var message = pipeline.CreateMessage();
+        message.Request.Method = RequestMethod.Get;
+        message.Request.Uri.Reset(new Uri($"https://localhost/threads/{threadId}/runs/{runId}/outputs"));
+        await pipeline.SendAsync(message, default).ConfigureAwait(false);
+        if (message.Response?.Status < 200 || message.Response?.Status >= 300)
+        {
+            var errorContent = await message.Response.Content.AsJsonAsync().ConfigureAwait(false);
+            throw new Exception($"Error getting run outputs: {errorContent}");
+        }
+        var responseJson = await message.Response!.Content.AsJsonAsync().ConfigureAwait(false) ?? string.Empty;
+        return RunOutputs.FromJson(responseJson);
+    }
+
+    public static async Task<RunEvents> GetAgentEventsAsync(this HttpPipeline pipeline, string threadId, string runId)
+    {
+        // Send the request
+        using var message = pipeline.CreateMessage();
+        message.Request.Method = RequestMethod.Get;
+        message.Request.Uri.Reset(new Uri($"https://localhost/threads/{threadId}/runs/{runId}/events"));
+        await pipeline.SendAsync(message, default).ConfigureAwait(false);
+        if (message.Response?.Status < 200 || message.Response?.Status >= 300)
+        {
+            var errorContent = await message.Response.Content.AsJsonAsync().ConfigureAwait(false);
+            throw new Exception($"Error getting run events: {errorContent}");
+        }
+        var responseJson = await message.Response!.Content.AsJsonAsync().ConfigureAwait(false) ?? string.Empty;
+        return RunEvents.FromJson(responseJson);
+    }
+
+    public static async Task<Workflow> PublishWorkflowAsync(this ClientPipeline pipeline, WorkflowDefinition workflowDefinition, string? id = null)
+    {
+        // Send the request
+        using var message = pipeline.CreateMessage();
         message.Request.Method = "POST";
         message.Request.Uri = new Uri("https://localhost/agents" + (id != null ? $"/{id}" : string.Empty));
-        message.Request.Content = System.ClientModel.BinaryContent.Create(new MemoryStream(Encoding.UTF8.GetBytes(payload)));
+        message.Request.Content = System.ClientModel.BinaryContent.Create(new MemoryStream(Encoding.UTF8.GetBytes(workflowDefinition.ToJson())));
         message.Request.Headers.Add("Content-Type", "application/json");
 
         await pipeline.SendAsync(message).ConfigureAwait(false);
@@ -32,22 +161,19 @@ public static class Ext
         }
 
         var responseJson = await message.Response!.Content.AsJsonAsync().ConfigureAwait(false) ?? string.Empty;
-
-        using var doc = JsonDocument.Parse(responseJson);
-        var workflowId = doc.RootElement.GetProperty("id").GetString() ?? string.Empty;
-
-        Console.WriteLine($"Creating workflow {workflowId}...");
-
-        return new Workflow(workflowId);
+        return Workflow.FromJson(responseJson);
     }
 
-    public static async Task<Workflow> PublishWorkflowAsync(this HttpPipeline pipeline, WorkflowBuilder workflowDefinition, string? id = null)
+    public static async Task<Workflow> PublishWorkflowAsync(this HttpPipeline pipeline, WorkflowDefinition workflowDefinition, string? id = null)
     {
+        var json = workflowDefinition.ToJson();
+        Console.WriteLine($"Publishing workflow: {json}");
+        Console.WriteLine($"Publishing workflow: {workflowDefinition.ToYaml()}");
         // Send the request
         using var message = pipeline.CreateMessage();
         message.Request.Method = RequestMethod.Post;
         message.Request.Uri.Reset(new Uri("https://localhost/agents" + (id != null ? $"/{id}" : string.Empty)));
-        message.Request.Content = RequestContent.Create(new MemoryStream(Encoding.UTF8.GetBytes(workflowDefinition.BuildJson().ToString())));
+        message.Request.Content = RequestContent.Create(new MemoryStream(Encoding.UTF8.GetBytes(workflowDefinition.ToJson())));
         message.Request.Headers.Add("Content-Type", "application/json");
 
         await pipeline.SendAsync(message, default).ConfigureAwait(false);
@@ -60,13 +186,7 @@ public static class Ext
         }
 
         var responseJson = await message.Response!.Content.AsJsonAsync().ConfigureAwait(false) ?? string.Empty;
-
-        using var doc = JsonDocument.Parse(responseJson);
-        var workflowId = doc.RootElement.GetProperty("id").GetString() ?? string.Empty;
-
-        Console.WriteLine($"Creating workflow {workflowId}...");
-
-        return new Workflow(workflowId);
+        return Workflow.FromJson(responseJson);
     }
 
     public static async Task DeleteWorkflowAsync(this ClientPipeline pipeline, Workflow workflow)
@@ -111,8 +231,12 @@ public static class Ext
         bool isWorkflowInstance =
             uri.AbsolutePath.Contains("/wf_agent");
 
+        bool isAgentExtensions =
+            (uri.AbsolutePath.Contains("/assistants") && uri.AbsolutePath.EndsWith("/extensions"))
+            || uri.AbsolutePath.Contains("/runs") && (uri.AbsolutePath.EndsWith("/events") || uri.AbsolutePath.EndsWith("/outputs"));
+
         bool shouldRewriteToWorkflow =
-            (isRunOrAgentPath && isWorkflow) || isWorkflowInstance;
+            (isRunOrAgentPath && isWorkflow) || isWorkflowInstance || isAgentExtensions;
 
         if (shouldRewriteToWorkflow)
         {
