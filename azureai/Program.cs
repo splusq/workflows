@@ -1,8 +1,9 @@
 using System.CommandLine;
+using Azure.AI.Projects;
 using Azure.AI.Agents.Persistent;
 using Azure.Identity;
 
-var endpointOption = new Option<string>("--endpoint", description: "The service endpoint URI.") { IsRequired = true };
+var endpointOption = new Option<Uri>("--endpoint", description: "The service endpoint URI.") { IsRequired = true };
 var apiVersionOption = new Option<string>("--apiVersion", description: "The API version.") { IsRequired = true };
 
 var rootCommand = new RootCommand
@@ -11,9 +12,9 @@ var rootCommand = new RootCommand
     apiVersionOption
 };
 
-rootCommand.SetHandler(async (string endpoint, string apiVersion) =>
+rootCommand.SetHandler(static async (Uri endpoint, string apiVersion) =>
 {
-    var client = new PersistentAgentsClient(endpoint.TrimEnd('/'), new DefaultAzureCredential(), new PersistentAgentsAdministrationClientOptions().WithPolicy(endpoint, apiVersion));
+    var client = new AIProjectClient(endpoint, new DefaultAzureCredential(), new AIProjectClientOptions().WithPolicy(endpoint, apiVersion)).GetPersistentAgentsClient();
 
     // create the single agents
     var teacherAgent = await client.Administration.CreateAgentAsync(

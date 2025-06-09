@@ -1,5 +1,4 @@
 ﻿using Azure.AI.Agents.Persistent;
-
 public static class TwoAgentMathChatWorkflow
 {
     public static WorkflowDefinition BuildFluent(PersistentAgent studentAgent, PersistentAgent teacherAgent)
