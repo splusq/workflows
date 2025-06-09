@@ -1,0 +1,5 @@
+# AI Foundry Skill Definition
+type: bing_grounding
+bing_grounding:
+  connections:
+    - connection_id: /subscriptions/921496dc-987f-410f-bd57-426eb2611356/resourceGroups/ai-agents-karthik-eu/providers/Microsoft.MachineLearningServices/workspaces/project-demo-eu-fw7g/connections/agentsbinggrounding
