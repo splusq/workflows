@@ -1,0 +1,87 @@
+# @no-reject-unauthorized
+
+{{
+  const { getAccessToken } = require('./scripts/auth.js')
+  exports.bearerToken = getAccessToken()
+  exports.a2aAgentUrl = "https://eastus.api.azureml.ms/workflows/a2a/v1.0/subscriptions/921496dc-987f-410f-bd57-426eb2611356/resourceGroups/ai-agents-karthik-eu/providers/Microsoft.MachineLearningServices/workspaces/project-demo-eu-fw7g/agents/asst_8vfrJwY26XYXzNfCzhJu2IZA"
+}}
+
+
+### Get Agent Card
+# @name agent
+GET {{a2aAgentUrl}}/.well-known/agent.json?api-version=2025-05-15-preview
+Content-Type: application/json
+Authorization: {{bearerToken}}
+
+{{
+    const { ok } = require('assert')
+    test.status(200);
+}}
+
+
+### Start new chat session
+{{
+  const { v4: uuidv4 } = require('uuid')
+  exports.sessionId = uuidv4()
+  $global.requestNum = 1;
+}}
+
+### Send message to agent
+# @name task
+# @depends agent
+
+{{
+  const { v4: uuidv4 } = require('uuid')
+  exports.taskId = uuidv4()
+
+  $global.requestNum++
+}}
+
+POST {{a2aAgentUrl}}
+Content-Type: application/json
+Authorization: {{bearerToken}}
+
+{
+  "jsonrpc": "2.0",
+  "method": "tasks/send",
+  "id": "{{$global.requestNum}}",
+  "params": {
+    "id": "{{taskId}}",
+    "sessionId": "{{sessionId}}",
+    "message": {
+      "role": "user",
+      "parts": [
+        {
+          "type": "text",
+          "text": "What are the current 30-year fixed mortgage rates in California?"
+        }
+      ]
+    }
+  }
+}
+
+{{
+    const { ok, strictEqual } = require('assert')
+    test.status(200);
+}}
+
+### Get task from Agent
+
+POST {{a2aAgentUrl}}
+Content-Type: application/json
+Authorization: {{bearerToken}}
+
+{
+  "jsonrpc": "2.0",
+  "method": "tasks/get",
+  "id": "{{task.id}}",
+  "params": {
+    "id": "{{task.result.id}}",
+    "historyLength": 10
+  }
+}
+
+{{
+    const { ok, strictEqual } = require('assert')
+    test.status(200);
+}}
