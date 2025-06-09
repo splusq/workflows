@@ -35,7 +35,7 @@ Get the access token:
 $token = az account get-access-token --scope "https://ai.azure.com/.default" --query accessToken -o tsv
 ```
 
-### Run the .NET project
+### Interact with an existing foundry agent using dotnet a2a client
 
 ```powershell
 dotnet run --project .\samples\semantic-kernel\a2a-net.Samples.SemanticKernel.Client\a2a-net.Samples.SemanticKernel.Client.csproj `
@@ -84,7 +84,7 @@ token=$(az account get-access-token --scope "https://ai.azure.com/.default" --qu
 ```
 
 
-### Run the .NET project
+### Interact with an existing foundry agent using dotnet a2a client
 ```bash
 dotnet run --project ./samples/semantic-kernel/a2a-net.Samples.SemanticKernel.Client/a2a-net.Samples.SemanticKernel.Client.csproj --server https://eastus.api.azureml.ms/workflows/a2a/v1.0/subscriptions/921496dc-987f-410f-bd57-426eb2611356/resourceGroups/ai-agents-karthik-eu/providers/Microsoft.MachineLearningServices/workspaces/project-demo-eu-fw7g/agents/asst_8vfrJwY26XYXzNfCzhJu2IZA?api-version=2024-12-01-preview --auth "Bearer=$token" --streaming
 ```
