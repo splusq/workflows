@@ -1,13 +1,13 @@
 
-## Windows instructions for sample
+## Windows
 
-### CLone a2a-net repo
+Clone a2a-net repo
 ```bash
 git clone https://github.com/neuroglia-io/a2a-net
 cd a2a-net
 ```
 
-### Install .NET SDK 9.0
+Install .NET SDK 9.0 (if needed)
 
 Download and install the .NET SDK 9.0 from the official Microsoft website:
 
@@ -19,10 +19,7 @@ Alternatively, using winget (Windows Package Manager):
 winget install Microsoft.DotNet.SDK.9
 ```
 
-### Authenticate with Azure CLI
-
-Ensure Azure CLI is installed. If not, install it from [Azure CLI](https://aka.ms/installazurecliwindows).
-
+Ensure Azure CLI is installed. If not, install it from [Azure CLI](https://aka.ms/installazurecliwindows).  
 Log in to Azure:
 
 ```powershell
@@ -30,13 +27,11 @@ az login
 ```
 
 Get the access token:
-
 ```powershell
 $token = az account get-access-token --scope "https://ai.azure.com/.default" --query accessToken -o tsv
 ```
 
-### Interact with an existing foundry agent using dotnet a2a client
-
+Interact with an existing foundry agent using dotnet a2a client
 ```powershell
 dotnet run --project .\samples\semantic-kernel\a2a-net.Samples.SemanticKernel.Client\a2a-net.Samples.SemanticKernel.Client.csproj `
   --server "https://eastus.api.azureml.ms/workflows/a2a/v1.0/subscriptions/921496dc-987f-410f-bd57-426eb2611356/resourceGroups/ai-agents-karthik-eu/providers/Microsoft.MachineLearningServices/workspaces/project-demo-eu-fw7g/agents/asst_8vfrJwY26XYXzNfCzhJu2IZA?api-version=2024-12-01-preview" `
@@ -44,15 +39,15 @@ dotnet run --project .\samples\semantic-kernel\a2a-net.Samples.SemanticKernel.Cl
   --streaming
 ```
 
-## Linux instructions for sample
+## Linux
 
-### CLone a2a-net repo
+CLone a2a-net repo
 ```bash
 git clone https://github.com/neuroglia-io/a2a-net
 cd a2a-net
 ```
 
-### Install .NET SDK 9.0
+Install .NET SDK 9.0 (if needed)
 ```bash
 wget https://packages.microsoft.com/config/debian/12/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
 sudo dpkg -i packages-microsoft-prod.deb
@@ -64,16 +59,12 @@ sudo apt-get update && \
   sudo apt-get install -y dotnet-sdk-9.0
 ```
 
-### Install Azure CLI (if needed)
-
-If Azure CLI is not installed, run the following commands:
-
+Install Azure CLI (if needed)
 ```bash
 curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
 ```
 
-### Authenticate with Azure CLI
-Log in to Azure:
+Authenticate with Azure CLI
 ```bash
 az login
 ```
@@ -83,8 +74,7 @@ Get the access token:
 token=$(az account get-access-token --scope "https://ai.azure.com/.default" --query accessToken -o tsv)
 ```
 
-
-### Interact with an existing foundry agent using dotnet a2a client
+Interact with an existing foundry agent using dotnet a2a client
 ```bash
 dotnet run --project ./samples/semantic-kernel/a2a-net.Samples.SemanticKernel.Client/a2a-net.Samples.SemanticKernel.Client.csproj --server https://eastus.api.azureml.ms/workflows/a2a/v1.0/subscriptions/921496dc-987f-410f-bd57-426eb2611356/resourceGroups/ai-agents-karthik-eu/providers/Microsoft.MachineLearningServices/workspaces/project-demo-eu-fw7g/agents/asst_8vfrJwY26XYXzNfCzhJu2IZA?api-version=2024-12-01-preview --auth "Bearer=$token" --streaming
 ```
