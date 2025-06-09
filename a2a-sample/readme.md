@@ -90,13 +90,13 @@ dotnet run --project ./samples/semantic-kernel/a2a-net.Samples.SemanticKernel.Cl
 ```
 
 ## Prompts
-What are the current 30-year fixed mortgage rates in California?
-What is the mortgage rate trend for the past 3 months?
-Are there any new homebuyer assistance programs in Texas? 
-Has the FHA loan limit changed for 2024?
-Is it a good time to refinance my mortgage?
-What is the forecast for housing prices in 2024? 
-What are the best cities for first-time homebuyers in the US?
-Are mortgage rates expected to drop in Q3 2024?
-What are current real estate trends in Seattle?
-What are the new tax benefits for homeowners in 2024?
+- What are the current 30-year fixed mortgage rates in California?
+- What is the mortgage rate trend for the past 3 months?
+- Are there any new homebuyer assistance programs in Texas? 
+- Has the FHA loan limit changed for 2024?
+- Is it a good time to refinance my mortgage?
+- What is the forecast for housing prices in 2024? 
+- What are the best cities for first-time homebuyers in the US?
+- Are mortgage rates expected to drop in Q3 2024?
+- What are current real estate trends in Seattle?
+- What are the new tax benefits for homeowners in 2024?
