@@ -1,7 +1,7 @@
 
 ## Windows instructions for sample
 
-### CLone repo
+### CLone a2a-net repo
 ```bash
 git clone https://github.com/neuroglia-io/a2a-net
 cd a2a-net
@@ -46,7 +46,7 @@ dotnet run --project .\samples\semantic-kernel\a2a-net.Samples.SemanticKernel.Cl
 
 ## Linux instructions for sample
 
-### CLone repo
+### CLone a2a-net repo
 ```bash
 git clone https://github.com/neuroglia-io/a2a-net
 cd a2a-net
