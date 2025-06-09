@@ -12,7 +12,7 @@ var rootCommand = new RootCommand
     apiVersionOption
 };
 
-rootCommand.SetHandler(static async (Uri endpoint, string apiVersion) =>
+rootCommand.SetHandler(async (Uri endpoint, string apiVersion) =>
 {
     var client = new AIProjectClient(endpoint, new DefaultAzureCredential(), new AIProjectClientOptions().WithPolicy(endpoint, apiVersion)).GetPersistentAgentsClient();
 
