@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "a2a": {
+      "commandName": "Project",
+      "commandLineArgs": "--endpoint \"https://basicaccountjqqa.services.ai.azure.com/api/projects/e2e-tests\" --audience \"https://ai.azure.com/\" --apiVersion \"2025-05-15-preview\""
+    }
+  }
+}
