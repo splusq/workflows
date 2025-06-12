@@ -1,11 +1,16 @@
-using Azure.AI.Projects;
+using Azure.AI.Agents.Persistent;
 using Azure.Core;
 
 public static class Extension
 {
-    public static AIProjectClientOptions WithPolicy(this AIProjectClientOptions options, Uri endpoint, string apiVersion)
+    public static PersistentAgentsAdministrationClientOptions WithPolicy(this PersistentAgentsAdministrationClientOptions options, string endpoint, string apiVersion)
     {
-        options.AddPolicy(new HttpPipelineRoutingPolicy(endpoint, apiVersion), HttpPipelinePosition.PerCall);
+        if (Uri.TryCreate(endpoint, UriKind.Absolute, out var _endpoint) is false)
+        {
+            throw new ArgumentException("Invalid endpoint URI.", nameof(endpoint));
+        }
+
+        options.AddPolicy(new HttpPipelineRoutingPolicy(_endpoint, apiVersion), HttpPipelinePosition.PerCall);
 
         return options;
     }
